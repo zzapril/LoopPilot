@@ -8,7 +8,7 @@ Last updated: 2026-06-26
 - [x] Fixture validator and verification scripts.
 - [x] Codex and Claude Code wrappers.
 - [x] Install and doctor commands.
-- [ ] Final verification and push.
+- [x] Final verification and push.
 
 ## Notes
 
