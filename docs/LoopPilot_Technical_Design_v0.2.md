@@ -1,675 +1,681 @@
-# LoopPilot Technical Design v0.2：判断优先，安全执行后置
+# LoopPilot Technical Design v0.2：Agent-native Loop Check
 
-**版本**：v0.2  
+**版本**：v0.2 rewrite
 **日期**：2026-06-25  
-**技术定位**：LoopPilot MVP 不是 agent 执行器，而是 loop decision layer + spec compiler + readonly audit runner。它默认不控制 Claude Code / Codex 的内部执行，因此 export/prompt 模式不能称为受控执行。
+**技术定位**：LoopPilot 不是独立 agent、runner 或 provider adapter。MVP 是 Codex / Claude Code 原生的 loop-check + loop contract 生成流程：先判断任务是否适合 loop，再让当前 agent 按明确 contract 执行。
 
 ---
 
 ## 1. 技术原则
 
-1. **不重造 agent**：不替代 Claude Code、Codex、Cursor。
-2. **判断优先**：核心价值是判断任务该不该 loop。
-3. **安全承诺与执行能力匹配**：不能强制拦截的路径，只能叫 export/prompt。
-4. **默认只读**：MVP 真实执行只允许元信息级只读巡检。
-5. **写操作 dry-run**：涉及写代码、依赖安装、commit、push、部署等动作，只生成计划、change plan 或 patch outline；具体 patch proposal 需要用户显式开启 `--include-code`。
-6. **隐私预览先于模型调用**：任何发给模型的内容都必须可见、可解释、可选择。
-7. **强制限制用本地可控指标**：文件数、diff 行数、运行时间、轮次；token 只做估算。
+1. **Agent-native first**：用户在 Codex 或 Claude Code 中发起，当前 agent 直接执行。
+2. **Check before loop**：任何循环执行前必须先给出 `RUN_WITH_CONTRACT` / `PLAN_ONLY` / `NO_GO`。
+3. **Contract before action**：`RUN_WITH_CONTRACT` 前必须展示 loop contract。
+4. **Current agent executes**：LoopPilot 不实现 runner，不维护长期执行器。
+5. **Files as optional memory**：文件用于审计和复用，不是执行前提。
+6. **Export is fallback**：导出给 GitHub/其他 agent 是备用路径，不是主路径。
+7. **No hidden provider**：不接独立 AI provider；复用当前 Codex / Claude Code 能力。
+8. **Shared core, thin wrappers**：规则和模板只维护一份，Codex / Claude Code 只做入口适配。
+9. **Eval before execution**：先用 fixture 验证 decision 质量，再做任何执行体验。
+10. **Schema first**：先输出可校验 JSON，再输出人话解释。
+11. **Chat-first by default**：默认只在当前 session 输出，不写文件；保存文件必须由用户明确要求。
+12. **One clarification max**：最多澄清一次，仍不明确则 `PLAN_ONLY`。
 
 ---
 
 ## 2. 架构概览
 
 ```text
-┌─────────────────────────────────────────────┐
-│ CLI                                         │
-│ ask / scan / recommend / create / run       │
-└─────────────────────┬───────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────┐
-│ Project Scanner                              │
-│ git metadata / structure / config / diff     │
-│ no secret content read                       │
-└─────────────────────┬───────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────┐
-│ Privacy Packager                             │
-│ summarize / redact / preview / opt-in        │
-└─────────────────────┬───────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────┐
-│ Decision Engine                              │
-│ rules first + optional LLM explanation       │
-│ NO_LOOP / READONLY_BRIEF / AUDIT / DRY_RUN   │
-└─────────────────────┬───────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────┐
-│ Spec Compiler                                │
-│ loop.yaml / run.md / report-template.md      │
-└─────────────────────┬───────────────────────┘
-                      │
-      ┌───────────────┴────────────────┐
-      │                                │
-┌─────▼─────────────┐          ┌───────▼────────────┐
-│ Export Adapter     │          │ Readonly Runner     │
-│ Claude/Codex prompt│          │ internal audit only  │
-│ no enforcement     │          │ no project writes    │
-└────────────────────┘          └──────────────────────┘
+User in Codex / Claude Code
+  |
+  v
+Agent wrapper
+  - Codex skill
+  - Claude Code skill / command
+  |
+  v
+Shared LoopPilot core
+  - parse goal
+  - use current context
+  - optionally use scan evidence
+  - apply risk rules
+  - classify RUN_WITH_CONTRACT / PLAN_ONLY / NO_GO
+  - emit schema-valid JSON decision
+  |
+  v
+Loop Contract
+  - goal
+  - scope
+  - allowed / forbidden actions
+  - gate
+  - stop conditions
+  - max rounds
+  |
+  v
+Current agent execution
+  - current session executes contract
+  - stops on gate/pass/risk/budget/user
+  - outputs report
 ```
 
-MVP 不包含真正的 scheduled runner、event runner、Claude hooks 强制拦截、Codex sandbox 强制校验。那些放到 v1。
+Optional file outputs:
+
+```text
+.looppilot/
+  core/
+    qualification-rules.md
+    decision-schema.json
+    contract-template.md
+  fixtures/
+    decision-fixtures.jsonl
+  latest-contract.md
+  latest-report.md
+  exports/
+    RUN_IN_CODEX.md
+    RUN_IN_CLAUDE.md
+    github-issue.md
+
+.agents/
+  skills/
+    looppilot/
+      SKILL.md
+
+.claude/
+  skills/
+    looppilot/
+      SKILL.md
+  commands/
+    should-loop.md
+```
+
+MVP does not include:
+
+- background daemon
+- CLI-first product surface
+- scheduled runner
+- GitHub issue queue
+- model provider registry
+- external Python/bash loop runner
+- durable orchestration
 
 ---
 
-## 3. 技术选型
+## 3. Agent-native Flow
 
-| 模块 | MVP 方案 | 说明 |
+### 3.1 Entry
+
+User asks in Codex or Claude Code:
+
+```text
+Can this task be a loop?
+```
+
+or:
+
+```text
+帮我判断这个任务能不能 loop，然后安全执行。
+```
+
+### 3.2 Flow
+
+1. Read user goal.
+2. Use current agent context and optional scan evidence.
+3. Apply loop qualification rules.
+4. Ask at most one clarifying question if the task is nearly classifiable.
+5. Return schema-valid JSON decision.
+6. Render human-readable explanation.
+7. If `RUN_WITH_CONTRACT`, render loop contract.
+8. Ask for confirmation unless the user already explicitly confirmed.
+9. Current agent session executes the contract.
+10. Current agent writes final report in chat.
+11. Write `.looppilot/latest-report.md` only if the user asked to save it.
+
+### 3.3 Why no runner?
+
+Codex and Claude Code already have:
+
+- code reading
+- file editing
+- command execution
+- approvals
+- sandbox behavior
+- user interaction
+- final reporting
+
+If LoopPilot adds its own runner, it duplicates the host agent and must own execution bugs, logging, permissions, timeouts, retries, and state. MVP avoids that.
+
+### 3.4 Delivery surfaces
+
+LoopPilot v0 should ship as a repo-local Agent Pack:
+
+| Surface | Path | Role |
 |---|---|---|
-| CLI | TypeScript + Node.js | npm 分发简单，适合本地开发者工具 |
-| 配置格式 | YAML + Markdown | 人可读，方便复制给 agent |
-| 项目扫描 | Node fs + git 命令 + 规则检测 | 轻量可控 |
-| 决策引擎 | 规则优先，可选 LLM | 高风险判断不能完全依赖 LLM |
-| 模型调用 | 用户显式配置后调用 | 默认展示 privacy preview |
-| 执行 | Internal readonly runner + export adapter | 不默认调用外部 agent 自动写代码 |
-| 状态存储 | `.looppilot/` | 本地透明 |
-| 日志 | JSONL + Markdown report | 便于复盘 |
-| 安全 | 本地规则 + 只读执行边界 | MVP 不承诺外部 CLI 强制拦截 |
+| Shared core | `.looppilot/core/` | Single source of truth for rules, schema, and contract template |
+| Decision schema | `.looppilot/core/decision-schema.json` | Machine-checkable output contract |
+| Decision fixtures | `.looppilot/fixtures/decision-fixtures.jsonl` | Regression set for qualification behavior |
+| Codex wrapper | `.agents/skills/looppilot/SKILL.md` | Codex-native invocation |
+| Claude Code wrapper | `.claude/skills/looppilot/SKILL.md` | Claude Code native invocation |
+| Claude command alias | `.claude/commands/should-loop.md` | Optional alias that references the Claude skill; no duplicated logic |
+| Scan helper | `.looppilot/scripts/scan-summary.*` | Optional read-only evidence summary |
+
+Wrappers must not duplicate the decision logic. They should import or reference the same shared core text. If wrappers diverge, the product becomes unsafe because the same task may receive different decisions in different agents.
 
 ---
 
-## 4. CLI 设计
+## 4. Decision Model
 
-### 4.1 命令
+Every decision must first be emitted as JSON that validates against `.looppilot/core/decision-schema.json`. Markdown explanation may follow, but tests should validate the JSON block.
+
+### 4.1 `NO_GO`
+
+Return `NO_GO` when any hard blocker is present:
+
+- goal is too broad
+- no objective gate
+- requests production deploy / publish
+- requests delete/drop/destructive action
+- touches auth/payment/permission without narrow scope
+- asks to “keep going until everything is perfect”
+- requires business judgment rather than engineering verification
+
+Output fields:
+
+```json
+{
+  "decision": "NO_GO",
+  "confidence": "high",
+  "needs_clarification": false,
+  "clarifying_question": null,
+  "host_capabilities": {
+    "host": "codex",
+    "can_edit_files": true,
+    "can_run_commands": true,
+    "has_approval_flow": true,
+    "capability_confidence": "known"
+  },
+  "reasons": [],
+  "safe_alternative": "",
+  "next_prompt": "",
+  "contract": null
+}
+```
+
+### 4.2 `PLAN_ONLY`
+
+Return `PLAN_ONLY` when task may become a loop but should not execute yet:
+
+- scope is large but decomposable
+- code changes are needed but files/gate are unclear
+- test command is missing
+- dependency install is requested
+- risky module is involved but user asks for analysis first
+
+Output fields:
+
+```json
+{
+  "decision": "PLAN_ONLY",
+  "confidence": "medium",
+  "needs_clarification": false,
+  "clarifying_question": null,
+  "host_capabilities": {
+    "host": "claude_code",
+    "can_edit_files": true,
+    "can_run_commands": true,
+    "has_approval_flow": true,
+    "capability_confidence": "known"
+  },
+  "reasons": [],
+  "plan_outputs": ["risk_analysis", "task_breakdown", "candidate_gate"],
+  "required_user_confirmation": [],
+  "contract": null
+}
+```
+
+### 4.3 `RUN_WITH_CONTRACT`
+
+Return `RUN_WITH_CONTRACT` only when all minimum conditions hold:
+
+- goal is narrow
+- objective gate exists
+- stop conditions are clear
+- forbidden actions are explicit
+- max rounds is bounded
+- risk is low or user-confirmable
+
+Output fields:
+
+```json
+{
+  "decision": "RUN_WITH_CONTRACT",
+  "confidence": "high",
+  "needs_clarification": false,
+  "clarifying_question": null,
+  "host_capabilities": {
+    "host": "codex",
+    "can_edit_files": true,
+    "can_run_commands": true,
+    "has_approval_flow": true,
+    "capability_confidence": "known"
+  },
+  "reasons": [],
+  "contract": {}
+}
+```
+
+---
+
+## 5. Host Capability Profile
+
+LoopPilot must account for the host agent before returning `RUN_WITH_CONTRACT`.
+
+Shape:
+
+```json
+{
+  "host": "codex",
+  "can_edit_files": true,
+  "can_run_commands": true,
+  "has_approval_flow": true,
+  "supports_skills_or_commands": true,
+  "capability_confidence": "known"
+}
+```
+
+Allowed `host` values:
+
+- `codex`
+- `claude_code`
+- `unknown`
+
+Rules:
+
+- If `capability_confidence` is `unknown`, return `PLAN_ONLY`.
+- If file editing is needed but `can_edit_files` is false or unknown, return `PLAN_ONLY`.
+- If command gate is required but `can_run_commands` is false or unknown, return `PLAN_ONLY`.
+- If a risky action requires approval but `has_approval_flow` is false or unknown, return `PLAN_ONLY` or `NO_GO`.
+- Host profile is not user trust. It only describes available execution controls.
+
+---
+
+## 6. Qualification Rules
+
+### 6.1 Two-condition test
+
+Borrowing from loop-harness, a task deserves a loop only if:
+
+1. **Verification is objective enough**: a command, file output, checklist, or clearly testable report can say pass/fail.
+2. **Waste is bounded**: max rounds, time, and scope prevent unbounded exploration.
+
+If either fails, return `NO_GO` or `PLAN_ONLY`.
+
+### 6.2 Risk keywords
+
+English:
+
+```text
+auth, payment, billing, checkout, permission, admin, production,
+deploy, publish, delete, drop, migration, secret, token, credential
+```
+
+Chinese:
+
+```text
+支付、账单、结账、鉴权、权限、管理员、生产、上线、发布、
+部署、删除、清空、迁移、数据库、密钥、凭证、token
+```
+
+### 6.3 Hard defaults
+
+| Signal | Default |
+|---|---|
+| no objective gate | `PLAN_ONLY` or `NO_GO` |
+| destructive action | `NO_GO` |
+| deploy/publish | `NO_GO` |
+| auth/payment code changes | `PLAN_ONLY` or `NO_GO` |
+| dependency install | `PLAN_ONLY` |
+| commit/push request | require explicit confirmation; MVP default no |
+| max rounds missing | ask user or default to 3 |
+| unknown host capabilities | `PLAN_ONLY` |
+
+### 6.4 Clarification rule
+
+Clarification is limited:
+
+- Ask at most one clarifying question.
+- Ask only when one answer can unlock a safe classification.
+- If still unclear, return `PLAN_ONLY`.
+- Never use clarification to override hard safety defaults.
+
+---
+
+## 7. Repo Context Scan
+
+Repo scan is optional evidence, not a v0 dependency. MVP must work from the user goal and current agent context even when scan is unavailable.
+
+If implemented, scan should be small. It exists to help the current agent decide, not to fully understand the codebase.
+
+Read:
+
+- `git status --short`
+- changed file names and diff stats
+- root files: `package.json`, `pyproject.toml`, `go.mod`, `pom.xml`
+- README title / short summary
+- test/build command candidates
+- risk path names: `auth`, `payment`, `billing`, `admin`, `secrets`
+
+Do not read by default:
+
+- `.env`
+- `.env.*`
+- `*.pem`
+- `*.key`
+- `secrets/**`
+- `.ssh/**`
+- `.aws/**`
+- full source tree
+- full diff
+
+MVP scan result:
+
+```json
+{
+  "repo": {
+    "dirty": true,
+    "changed_files": [],
+    "diff_stat": ""
+  },
+  "project": {
+    "languages": [],
+    "test_commands": [],
+    "build_commands": []
+  },
+  "risk": {
+    "risk_paths": [],
+    "sensitive_candidates": []
+  }
+}
+```
+
+---
+
+## 8. Loop Contract
+
+Contract is the handoff between LoopPilot and the current agent execution.
+
+Shape:
+
+```json
+{
+  "decision": "RUN_WITH_CONTRACT",
+  "host_capabilities": {
+    "host": "codex",
+    "can_edit_files": true,
+    "can_run_commands": true,
+    "has_approval_flow": true,
+    "capability_confidence": "known"
+  },
+  "goal": "Fix the current failing test",
+  "scope": {
+    "include": ["src/**", "tests/**"],
+    "exclude": [".env", "secrets/**", "dist/**"]
+  },
+  "allowed_actions": [
+    "read_files",
+    "edit_small_scope",
+    "run_test_command"
+  ],
+  "forbidden_actions": [
+    "edit_secrets",
+    "change_auth_or_payment",
+    "install_dependencies",
+    "git_commit",
+    "git_push",
+    "deploy"
+  ],
+  "gate": {
+    "type": "command",
+    "command": "npm test",
+    "expect": "exit_zero"
+  },
+  "stop_conditions": [
+    "gate_passes",
+    "max_rounds_reached",
+    "same_failure_twice",
+    "forbidden_action_needed",
+    "user_interrupt"
+  ],
+  "max_rounds": 5,
+  "human_confirmations": [
+    "dependency_install",
+    "large_diff",
+    "config_change"
+  ],
+  "report": [
+    "what_changed",
+    "commands_run",
+    "gate_result",
+    "risks_or_blockers",
+    "next_steps"
+  ]
+}
+```
+
+For chat display, render as Markdown before execution.
+
+### 8.1 Contract invariants
+
+These invariants must hold regardless of Codex or Claude Code:
+
+- Same input fixture should produce same `decision`.
+- Same `RUN_WITH_CONTRACT` fixture should produce semantically equivalent `gate`, `stop_conditions`, and `forbidden_actions`.
+- Wrapper-specific wording may differ, but safety policy cannot differ.
+- If host-agent capabilities are unknown, downgrade to `PLAN_ONLY`.
+- If scan helper fails, continue with user-provided context and mark confidence lower; do not silently assume safety.
+- Decision JSON must validate before execution.
+- Contract is displayed in chat before any action.
+
+---
+
+## 9. Agent Execution Protocol
+
+When decision is `RUN_WITH_CONTRACT`, the current agent must follow this protocol:
+
+1. Restate the contract.
+2. Ask for confirmation unless the user already explicitly confirmed.
+3. Work one round at a time.
+4. After each round, run the gate if safe and available.
+5. Stop immediately on any stop condition.
+6. Do not broaden scope without asking.
+7. Final answer must include report fields.
+8. Do not write `.looppilot/latest-contract.md` or `.looppilot/latest-report.md` unless the user asked to save them.
+
+The agent should not self-approve a widened scope. If the contract needs to change, stop and ask.
+
+### 9.1 Codex surface
+
+Codex can execute the contract directly in the current session. Optional export file:
+
+```text
+.looppilot/exports/RUN_IN_CODEX.md
+```
+
+Recommended repo-local wrapper:
+
+```text
+.agents/skills/looppilot/SKILL.md
+```
+
+### 9.2 Claude Code surface
+
+Claude Code can execute the same contract directly in the current session or through a generated slash-command-style handoff. Optional export file:
+
+```text
+.looppilot/exports/RUN_IN_CLAUDE.md
+```
+
+Recommended repo-local wrapper:
+
+```text
+.claude/skills/looppilot/SKILL.md
+.claude/commands/should-loop.md
+```
+
+The command file should only call or reference the skill. It must not duplicate qualification rules.
+
+The contract content must stay the same across Codex and Claude Code. Only the wrapper wording changes.
+
+---
+
+## 10. Optional Files
+
+Files are optional in MVP. They help with audit and reuse, but default behavior is chat-first.
+
+Do not write these files unless the user explicitly asks to save the contract, save the report, or export a handoff.
+
+### 10.1 `.looppilot/latest-contract.md`
+
+Human-readable contract for the current task.
+
+### 10.2 `.looppilot/latest-report.md`
+
+Final report from the latest agent execution.
+
+### 10.3 Export files
+
+Only generated on request:
+
+```text
+.looppilot/exports/RUN_IN_CODEX.md
+.looppilot/exports/RUN_IN_CLAUDE.md
+.looppilot/exports/github-issue.md
+```
+
+Export files are not controlled execution. They are instructions for another agent/user workflow.
+
+---
+
+## 11. CLI / Command Surface
+
+MVP can be implemented without a standalone CLI, but if we provide one, it should mirror agent-native behavior.
+
+Agent-native first:
+
+```text
+User: should this loop?
+Codex / Claude Code: runs LoopPilot check inline
+```
+
+Optional CLI later:
 
 ```bash
-looppilot ask "帮我看看这个项目有没有明显风险"
-looppilot scan
-looppilot recommend "帮我修复失败测试"
-looppilot create --from .looppilot/recommendations/latest.json --export-only
-looppilot run --readonly .looppilot/loops/code-health/loop.yaml
+looppilot check "fix failing tests"
+looppilot export --target codex
+looppilot export --target claude
 ```
 
-### 4.2 命令职责
-
-| 命令 | 职责 |
-|---|---|
-| `ask` | 一步完成扫描、隐私预览、推荐、生成建议 |
-| `scan` | 只扫描本地项目信息，不调用模型 |
-| `recommend` | 输出是否适合 loop 的判断 |
-| `create` | 生成 loop spec 和外部工具 prompt |
-| `run --readonly` | 只读执行一次巡检并生成报告 |
+No MVP command should be named `run`, because execution belongs to the current agent.
 
 ---
 
-## 5. 决策类型
+## 12. Test Strategy
 
-MVP 有 3 类主决策，以及 1 个高风险降级状态。
+### 12.1 Decision fixtures
 
-### 5.1 NO_LOOP
+At least 45 fixtures:
 
-适用：
+- 15 `NO_GO`
+- 15 `PLAN_ONLY`
+- 15 `RUN_WITH_CONTRACT`
 
-- 目标一次性完成即可。
-- 验收标准不清晰。
-- 风险高。
-- 涉及支付、鉴权、权限、生产环境、部署、删除数据。
+Each fixture includes:
 
-行为：
+- user goal
+- repo summary
+- expected decision
+- expected reasons
+- expected forbidden actions
+- expected gate presence
+- expected stop conditions
+- expected host capability requirements
+- expected clarification behavior
 
-- 不生成可执行 loop。
-- 生成单次 prompt 或拆解建议。
-- 解释为什么不该 loop。
+### 12.2 Schema validation tests
 
-### 5.2 NO_LOOP_WITH_READONLY_BRIEF
+For every fixture:
 
-适用：
+- extract the first JSON decision block
+- validate against `.looppilot/core/decision-schema.json`
+- reject extra unsafe actions not allowed by the schema
+- reject `RUN_WITH_CONTRACT` without known host capabilities
 
-- 任务不适合 loop。
-- 风险高，不能进入标准 audit runner。
-- 仍然可以基于目录结构、配置摘要、diff 摘要给出低风险提示。
+Schema validation is a release gate.
 
-行为：
+### 12.3 Wrapper parity tests
 
-- 不生成可执行 loop。
-- 不调用写操作或外部 agent。
-- 只输出元信息级风险 brief。
-- 报告必须明确 `coverage` 和 `blind_spots`，避免用户把 brief 理解为完整审计。
+For every fixture:
 
-### 5.3 MANUAL_READONLY_AUDIT
+- run the Codex wrapper prompt against the shared core
+- run the Claude Code wrapper prompt against the shared core
+- normalize output to the decision schema
+- assert same `decision`
+- assert safety-critical fields match for `RUN_WITH_CONTRACT`
 
-适用：
+Wrapper parity is a release gate. If Codex and Claude Code disagree on safety classification, the fixture fails.
 
-- 只读检查。
-- 目标是报告，不是修改。
-- 可以通过文件结构、diff 摘要、配置摘要、测试候选等元信息给出结论。
+### 12.4 Safety tests
 
-行为：
+Must cover:
 
-- 允许 `run --readonly` 真实执行。
-- 不写项目文件。
-- 只写 `.looppilot/runs/<id>/report.md`。
-
-### 5.4 SHORT_LOOP_DRY_RUN
-
-适用：
-
-- 目标相对明确。
-- 有测试或可验证条件。
-- 但需要写代码、改配置或跑外部命令。
-
-行为：
-
-- 不自动改项目。
-- 生成 dry-run plan、change plan、patch outline、Claude/Codex prompt。
-- 只有用户显式开启 `--include-code` 后，才允许生成具体 patch proposal。
-- 要求用户手动复制或在外部工具里确认。
+- payment/auth/deploy tasks do not return `RUN_WITH_CONTRACT`
+- no gate means no `RUN_WITH_CONTRACT`
+- missing max rounds defaults to safe cap or asks user
+- secrets are excluded from scan
+- `RUN_WITH_CONTRACT` contract always has gate
+- `RUN_WITH_CONTRACT` contract always has stop conditions
+- export output says it is not controlled execution
+- unknown host capabilities return `PLAN_ONLY`
+- more than one clarification is never required
+- default flow does not write files
 
 ---
 
-## 6. Project Scanner
+## 13. Implementation Order
 
-### 6.1 扫描内容
+1. Define `.looppilot/core/qualification-rules.md`.
+2. Define `.looppilot/core/decision-schema.json`.
+3. Define `.looppilot/core/contract-template.md`.
+4. Write 45 decision fixtures before building UX.
+5. Implement a tiny fixture validator for schema and expected fields.
+6. Create Codex wrapper at `.agents/skills/looppilot/SKILL.md`.
+7. Create Claude Code wrapper at `.claude/skills/looppilot/SKILL.md`.
+8. Add `.claude/commands/should-loop.md` as an alias only.
+9. Add optional read-only scan helper.
+10. Add optional explicit-save files.
+11. Add optional export files.
 
-| 内容 | 处理方式 |
-|---|---|
-| Git 状态 | 读取 branch、dirty state、recent commits 摘要 |
-| 目录结构 | 生成 tree summary，限制深度和文件数 |
-| 项目类型 | package.json、pyproject.toml、go.mod、pom.xml 等 |
-| README | 默认提取标题和摘要，不发送全文 |
-| 测试命令候选 | 从 scripts、CI、常见文件推断 |
-| 构建命令候选 | 从 scripts、CI 推断 |
-| diff | 默认仅文件名、变更行数、风险标签 |
-| 敏感文件候选 | 只记录路径和类型，不读取内容 |
+Do not implement:
 
-### 6.2 永不读取内容的文件
-
-默认不读取：
-
-```text
-.env
-.env.*
-*.pem
-*.key
-*.p12
-*.crt
-id_rsa
-id_ed25519
-**/secrets/**
-**/.aws/**
-**/.ssh/**
-```
-
-### 6.3 扫描输出
-
-```json
-{
-  "project_type": "node-typescript",
-  "git": {
-    "branch": "main",
-    "dirty": true,
-    "changed_files_count": 8
-  },
-  "commands": {
-    "test_candidates": ["npm test"],
-    "build_candidates": ["npm run build"]
-  },
-  "risk_signals": [
-    "dirty_worktree",
-    "has_auth_related_files",
-    "missing_test_script"
-  ],
-  "sensitive_candidates": [
-    ".env",
-    "private.key"
-  ]
-}
-```
+- background runner
+- full CLI before wrapper parity is stable
+- model provider registry
+- GitHub scheduler
+- long-lived state machine
+- token accounting
+- default file writes
 
 ---
 
-## 7. Privacy Packager
+## 14. References
 
-### 7.1 分级策略
-
-| 级别 | 内容 | 默认处理 |
-|---|---|---|
-| L0 | 技术栈、文件数量、目录结构摘要 | 可进入模型上下文 |
-| L1 | 依赖名、脚本名、CI 类型 | 脱敏后可进入模型上下文 |
-| L2 | README 摘要 | 可进入模型上下文 |
-| L3 | diff 摘要 | 只发文件名、行数、风险标签 |
-| L4 | 代码片段、完整 diff | 默认不发送，需 opt-in |
-| L5 | secrets、密钥、生产配置 | 永不发送，默认不读取 |
-
-### 7.2 隐私预览
-
-任何模型调用前生成：
-
-```text
-.looppilot/privacy-preview.md
-```
-
-内容包括：
-
-- 将发送的字段。
-- 不会发送的字段。
-- 检测到但不读取的敏感文件。
-- 用户可选开关。
-
-示例：
-
-```text
-本次将发送：
-- 项目类型：Node.js / TypeScript
-- 目录结构摘要：最大 200 行
-- package.json scripts 和依赖名
-- 最近 diff 摘要：文件名 + 变更行数
-
-不会发送：
-- 完整源码
-- 完整 diff
-- .env 内容
-- 私钥 / token / 证书
-
-如需发送具体代码片段，请重新运行：
-looppilot recommend --include-code
-```
-
-### 7.3 模型调用状态机
-
-模型调用必须经过以下状态：
-
-```text
-scan_local
-  -> build_privacy_preview
-  -> choose_privacy_mode
-  -> confirm_or_skip_model
-  -> run_rules
-  -> optional_llm_explanation
-  -> write_recommendation
-```
-
-隐私模式：
-
-| 模式 | 是否调用模型 | 可发送内容 |
-|---|---|---|
-| `local-only` | 否 | 不发送任何内容 |
-| `interactive` | 用户确认后调用 | L0-L3 摘要 |
-| `send-summary` | 命令行显式允许 | L0-L3 摘要 |
-| `include-code` | 命令行显式允许，仍需预览 | 必要 L4 片段；L5 仍永不读取 |
-
-如果用户未确认，系统必须继续给出规则层推荐，但不得调用模型生成解释。
+- `breim/loop-harness`: qualification gate, NO-GO first, state/vision/verifier methodology.
+- `ksimback/looper`: loop design layer, `RUN_IN_SESSION.md`, explicit verification and stop guards.
+- `iannuttall/ralph`: files and git as memory, replaceable agent command.
+- `federiconeri/wiggum-cli`: scan/spec/delegate pattern for Claude Code and Codex.
+- Claude Code official docs: skills live under `.claude/skills/<skill-name>/SKILL.md`; `.claude/commands/` remains compatible, but skills are the recommended richer form. See https://code.claude.com/docs/en/skills.
 
 ---
 
-## 8. Decision Engine
+## 15. Final Technical Definition
 
-### 8.1 规则优先
-
-高风险任务先由规则层拦截或降级，不等 LLM 决定。
-
-高风险关键词和信号：
-
-- payment、billing、checkout、auth、permission、admin、production、deploy、delete、drop、migration。
-- 支付、账单、结账、鉴权、权限、管理员、生产、上线、发布、部署、删除、清空、迁移、数据库、密钥。
-- 用户要求“自动提交”“自动上线”“自动发布”“一直跑到没问题”“修到全部没问题”。
-- 缺少可验证条件。
-- 工作区有大量未提交改动。
-- 涉及敏感文件候选。
-
-高风险降级规则：
-
-- 如果任务要求自动修改、上线、发布、删除数据或处理资金链路，返回 `NO_LOOP`。
-- 如果任务要求检查高风险区域，但不要求修改，返回 `NO_LOOP_WITH_READONLY_BRIEF`。
-- 如果任务目标是只读项目健康检查，且没有高风险区域写入意图，才允许返回 `MANUAL_READONLY_AUDIT`。
-
-### 8.2 LLM 的作用
-
-LLM 只做：
-
-- 解释推荐理由。
-- 根据扫描摘要生成用户可读建议。
-- 帮助选择更合适的人话命名。
-
-LLM 不单独决定：
-
-- 是否允许写操作。
-- 是否允许读取敏感文件。
-- 是否允许运行外部命令。
-- 是否允许进入受控执行。
-
-### 8.3 输出结构
-
-```json
-{
-  "decision_type": "MANUAL_READONLY_AUDIT",
-  "confidence": 0.82,
-  "reasons": [
-    "任务目标是检查风险，不要求自动修改",
-    "输出可以是报告",
-    "风险可控"
-  ],
-  "downgraded_from": null,
-  "requires_user_confirmation": true,
-  "privacy_mode": "interactive",
-  "recommended_mode": "readonly_internal_run",
-  "coverage": [
-    "repo_metadata",
-    "safe_config_summary",
-    "diff_summary"
-  ],
-  "blind_spots": [
-    "full_source_code",
-    "test_execution",
-    "dependency_vulnerability_scan"
-  ]
-}
-```
-
----
-
-## 9. Loop Spec
-
-### 9.1 loop.yaml 示例
-
-```yaml
-version: 0.2
-name: code-health-audit
-decision_type: MANUAL_READONLY_AUDIT
-mode: manual_readonly_audit
-execution_mode: internal_readonly
-
-goal: >
-  Check whether the current repository has obvious health or risk issues.
-
-trigger:
-  type: manual
-  schedule: null
-
-context_policy:
-  privacy_mode: interactive
-  default_send_level: L3
-  include_code: false
-  include_full_diff: false
-  never_read:
-    - .env
-    - "*.pem"
-    - "*.key"
-
-allowed_actions:
-  - read_repo_metadata
-  - read_safe_config_summary
-  - read_diff_summary
-  - create_report
-
-forbidden_actions:
-  - write_project_files
-  - install_dependencies
-  - git_commit
-  - git_push
-  - deploy
-  - read_secrets
-
-verification:
-  output_required:
-    - risk_summary
-    - evidence
-    - suggested_next_steps
-    - coverage
-    - blind_spots
-
-stop_condition:
-  max_rounds: 1
-  max_runtime_seconds: 300
-  max_files_scanned: 500
-  max_diff_lines: 2000
-
-budget_estimate:
-  estimated_tokens: 20000
-  enforceable: false
-  enforceable_limits:
-    - max_runtime_seconds
-    - max_files_scanned
-    - max_diff_lines
-
-user_confirmation:
-  required_before_model_call: true
-  required_before_write: true
-
-report:
-  path: .looppilot/runs/latest/report.md
-```
-
-### 9.2 Spec 校验规则
-
-任何 spec 必须包含：
-
-- `decision_type`
-- `execution_mode`
-- `context_policy`
-- `forbidden_actions`
-- `stop_condition`
-- `budget_estimate.enforceable`
-- `user_confirmation`
-- `verification.output_required` 中的 `coverage`
-- `verification.output_required` 中的 `blind_spots`
-
-缺失则不允许执行。
-
----
-
-## 10. 执行模式
-
-### 10.1 Export / Prompt Mode
-
-生成给 Claude Code / Codex 的文件：
-
-```text
-.looppilot/loops/<name>/run.md
-.looppilot/loops/<name>/codex-prompt.md
-```
-
-明确文案：
-
-> 这是 export/prompt 模式。LoopPilot 无法强制 Claude Code / Codex 遵守安全策略。请在外部工具中确认执行权限。
-
-### 10.2 Internal Read-only Run
-
-LoopPilot 自己执行：
-
-- 项目扫描。
-- 风险规则检查。
-- 可选 LLM 解释。
-- 报告生成。
-
-它不执行：
-
-- 文件写入项目目录。
-- 依赖安装。
-- 测试命令。
-- 完整源码审计。
-- 完整 diff 审计。
-- git commit / push。
-- 部署。
-
-它只能通过 Project Scanner 的安全读取接口访问文件。读取前必须先应用 `never_read` denylist；默认只读取安全配置摘要、README 摘要、目录结构摘要和 diff 摘要。
-
-唯一允许写入：
-
-```text
-.looppilot/runs/<run-id>/report.md
-.looppilot/runs/<run-id>/log.jsonl
-```
-
-### 10.3 Controlled Execution（v1+）
-
-只有同时满足以下条件，才可称为受控执行：
-
-1. 能检测外部工具的安全能力。
-2. 能验证 sandbox / approval / hooks 已启用。
-3. 能确认危险动作会被拦截或要求人工确认。
-4. 能记录执行日志。
-5. 能在超时、超轮次、超文件数时停止。
-
-MVP 不实现。
-
----
-
-## 11. 成本控制
-
-### 11.1 MVP 可强制限制
-
-- `max_runtime_seconds`
-- `max_rounds`
-- `max_files_scanned`
-- `max_diff_lines`
-- `max_report_chars`
-
-### 11.2 MVP 不可强制限制
-
-- 外部 CLI 实际 token。
-- 订阅模型实际用量。
-- Claude/Codex 内部工具调用次数。
-
-文案必须说明：
-
-> token 是估算，不是硬限制。只有当执行路径提供预算拦截能力时，才能称为 token hard limit。
-
----
-
-## 12. 报告设计
-
-Readonly audit report 包含：
-
-```markdown
-# LoopPilot Read-only Audit Report
-
-## Summary
-
-## Decision
-- decision_type:
-- confidence:
-- why:
-
-## What I checked
-
-## What I did not check
-
-## Coverage
-
-## Blind spots
-
-## Risks found
-
-## Evidence
-
-## Suggested next steps
-
-## Privacy
-- sent_to_model:
-- not_sent:
-- sensitive_candidates_not_read:
-
-## Limits
-- max_runtime_seconds:
-- max_files_scanned:
-- max_diff_lines:
-- token_estimate:
-```
-
----
-
-## 13. 开发里程碑
-
-### Week 1：CLI 和扫描
-
-- 建 TypeScript CLI。
-- 实现 `scan`。
-- 实现敏感文件识别。
-- 生成 `project-scan.json`。
-- 生成 `privacy-preview.md`。
-
-### Week 2：决策和 spec
-
-- 实现规则层。
-- 实现中英文高风险关键词和降级规则。
-- 实现三类主决策和 `NO_LOOP_WITH_READONLY_BRIEF` 降级状态。
-- 实现 `recommend`。
-- 实现 `loop.yaml` schema。
-- 完成至少 50 个任务测试集。
-
-### Week 3：Export 和只读执行
-
-- 实现 `create --export-only`。
-- 生成 Claude / Codex prompt。
-- 实现 `run --readonly`。
-- 生成报告和 JSONL 日志。
-
-### Week 4：打磨和验证
-
-- 优化人话解释。
-- 加入隐私确认交互。
-- 补齐 `local-only`、`interactive`、`send-summary`、`include-code` 四种隐私模式。
-- 补充危险任务测试集。
-- 写 README 和 examples。
-
-MVP 不做双 adapter 自动执行，不做 hooks，不做 scheduled，不做 event-driven。
-
----
-
-## 14. 测试策略
-
-### 14.1 决策测试集
-
-至少包含：
-
-- 10 个 NO_LOOP。
-- 10 个 NO_LOOP_WITH_READONLY_BRIEF。
-- 10 个 MANUAL_READONLY_AUDIT。
-- 10 个 SHORT_LOOP_DRY_RUN。
-- 10 个危险任务拒绝 / 降级案例。
-
-### 14.2 安全测试
-
-必须覆盖：
-
-- `.env` 不读取。
-- `*.pem` 不读取。
-- 完整代码默认不发送。
-- 完整 diff 默认不发送。
-- `--include-code` 未开启时不生成具体 patch proposal。
-- 写操作不能进入 `internal_readonly`。
-- export/prompt 不显示为 controlled execution。
-- 中文高风险任务不会错误进入标准 audit runner。
-
-### 14.3 验收标准
-
-| 指标 | 要求 |
-|---|---|
-| 无隐私预览的模型调用 | 0 |
-| 读取 L5 敏感文件内容 | 0 |
-| 未确认发送完整代码 | 0 |
-| 未确认项目写入 | 0 |
-| 无 stop_condition 的 spec | 0 |
-| 高风险任务错误进入只读执行 | 0 |
-| 只读报告缺失 coverage / blind_spots | 0 |
-
----
-
-## 15. 后续受控执行方案预留
-
-v1 可以增加：
-
-- Claude Code hooks adapter。
-- Codex sandbox / approval adapter。
-- Git worktree 隔离。
-- patch apply 前人工确认。
-- scheduled readonly runner。
-- event-driven diff watcher。
-
-但这些必须建立在能力检测和强制拦截验证之上，否则只能作为 export/prompt。
-
----
-
-## 16. 收敛后的技术定义
-
-**LoopPilot MVP 是一个本地 CLI，负责本地扫描、隐私预览、loop 决策、spec 生成和只读巡检报告。它不直接控制 Claude Code / Codex 的写操作；对外部 agent 的集成第一版只提供 export/prompt。真正受控执行放到 v1，并以可验证的 sandbox / approval / hooks 为前提。**
+**LoopPilot MVP is an agent-native Agent Pack for Codex and Claude Code. It keeps one shared core for qualification rules, decision schema, contract templates, and fixtures; exposes thin wrappers for each host agent; emits schema-valid JSON before explanation; classifies a task as `RUN_WITH_CONTRACT`, `PLAN_ONLY`, or `NO_GO`; renders a loop contract; and lets the current agent session execute that contract. It does not run loops itself and does not write files by default.**

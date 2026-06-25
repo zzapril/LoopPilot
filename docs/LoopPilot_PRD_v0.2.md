@@ -1,510 +1,495 @@
-# LoopPilot PRD v0.2：让小白知道什么时候该 Loop
+# LoopPilot PRD v0.2：Agent-native Loop Check
 
-**版本**：v0.2  
+**版本**：v0.2 rewrite
 **日期**：2026-06-25  
 **工作名**：LoopPilot / Should I Loop  
-**一句话定位**：用户不用理解 loop engineering，只要描述想让 AI 做什么，LoopPilot 判断这个任务是否适合 loop；适合则生成安全、可解释、可复制执行的 loop spec；MVP 仅对只读巡检提供真实执行，写操作全部停留在 dry-run 或人工确认。
+**一句话定位**：LoopPilot 是 Codex 和 Claude Code 里的 loop-check 和 loop contract 能力。用户不用懂 loop engineering，只要说想让 AI 做什么，LoopPilot 先判断该不该 loop；适合则生成安全边界、停止条件和验收标准，并让当前 agent 直接按 contract 执行。
 
 ---
 
 ## 1. 背景
 
-AI Coding 工具已经具备多轮修改、测试、审查和执行能力，但 vibe coding 用户的核心问题不是“没有 agent”，而是：
+Codex、Claude Code 等 agent 已经能读代码、改代码、跑测试、总结结果。LoopPilot 不需要再做一个 runner，也不需要再接一个 AI provider。
 
-- 不知道什么任务适合 loop，什么任务不该 loop。
-- 不知道什么时候一轮对话就够，什么时候需要短 loop。
-- 不知道如何设置停止条件、验收条件、预算边界和人工确认。
-- 不知道如何避免 AI 无限运行、乱改代码、烧 token、产生不可控变更。
-- 看不懂 hook、verifier、gate、runner、skill、state 等工程概念。
+真正的问题是：普通用户不知道什么时候该让 agent 循环工作，也不知道怎么给 loop 设置边界。
 
-LoopPilot 不重造 Claude Code、Codex 或 Cursor，而是在它们之前做一层产品化判断：**先判断要不要 loop，再生成安全 spec，最后选择 export、只读执行或未来受控执行路径。**
+用户卡住的不是：
 
----
+> 我怎么写一个 loop runner？
 
-## 2. 核心问题
+用户真正问的是：
 
-用户真正的问题不是：
+> 这个任务该不该让 Codex / Claude Code 循环做？如果可以，怎么保证它不会乱跑？
 
-> 我如何写一个 loop.yaml？
-
-而是：
-
-> 我现在这个任务到底该不该让 AI 自动循环？如果该，怎么安全地开始？如果不该，应该降级成什么？
-
-所以 LoopPilot 的第一性不是“执行 loop”，而是：
-
-1. 识别任务是否适合 loop。
-2. 给出普通人能理解的判断理由。
-3. 把危险任务自动降级。
-4. 生成可检查、可复制、可停止的 loop spec。
-5. 在没有强制安全边界时，绝不把 prompt/export 包装成“受控执行”。
+LoopPilot 的目标是站在 agent 执行之前，做一次轻量的资格审查和任务包装。
 
 ---
 
-## 3. 产品目标
+## 2. 产品定位
 
-### 3.1 北极星目标
+LoopPilot 不是：
 
-**让不会 loop engineering 的用户，也能判断一个任务是否应该自动化循环，并在安全边界内使用它。**
+- 不是新的 coding agent。
+- 不是新的 agent runtime。
+- 不是 GitHub issue bot。
+- 不是 scheduled loop 平台。
+- 不是自动部署、自动合并、自动发布工具。
+- 不替代 Codex / Claude Code / Cursor。
 
-### 3.2 MVP 目标
+LoopPilot 是：
+
+- loop qualification：判断任务值不值得 loop。
+- loop contract：把目标、边界、验收、停止条件写清楚。
+- agent-native handoff：让当前 Codex 或 Claude Code session 直接执行。
+- export fallback：必要时导出给 GitHub issue 或其他 agent。
+
+一句话：
+
+> LoopPilot 负责“该不该 loop、怎么安全 loop”；Codex / Claude Code 负责真正执行。
+
+### 2.1 进一步收敛：v0 不是 CLI 产品，而是 Agent Pack
+
+v0 最容易走偏的点是：把 LoopPilot 做成一个新的 CLI 或平台。那会重新发明 agent runner，也会让 Codex / Claude Code 支持变成“导出文件再复制”的二等体验。
+
+更简单的 MVP 形态应该是：
+
+- 一个共享的 LoopPilot core：规则、decision schema、contract 模板、测试样例。
+- 一个 Codex wrapper：以 Codex skill / session 指令方式触发。
+- 一个 Claude Code wrapper：以 Claude Code skill 方式触发，slash command 只做快捷别名。
+- 一个可选的 repo scan 小脚本：只生成证据摘要，不参与执行 loop。
+
+用户体验上，用户仍然只在当前 agent 里说：
+
+```text
+帮我判断这个任务能不能 loop，然后按安全 contract 执行。
+```
+
+LoopPilot 不要求用户复制 prompt，也不要求用户离开 Codex / Claude Code。
+
+v0 第一刀只交付五件事：
+
+- `qualification-rules.md`
+- `decision-schema.json`
+- `contract-template.md`
+- `decision-fixtures.jsonl`
+- Codex / Claude Code 两个 wrapper
+
+scan、export、report 文件写入都后置；先把“判断协议”做稳。
+
+---
+
+## 3. GitHub Loop 项目启发
+
+LoopPilot 参考 GitHub 上几个 loop 相关项目的实践，但只取最小有用部分。
+
+| 项目 | 值得复用的点 | LoopPilot 的取舍 |
+|---|---|---|
+| `breim/loop-harness` | 先做资格门禁；大多数任务不值得 loop；auth/payment/architecture 默认拒绝 | MVP 优先做 loop-check |
+| `ksimback/looper` | 先设计 loop，再交给现有 agent；生成 handoff 文件；强调 verification 和 stop guards | MVP 生成 agent loop contract |
+| `iannuttall/ralph` | files + git 作为状态；agent runner 可替换为 Codex / Claude | MVP 不做 runner，只借鉴文件化 contract |
+| `federiconeri/wiggum-cli` | scan -> spec -> delegate to Claude/Codex | MVP 保留 scan + handoff，不做完整 feature platform |
+| `disler/infinite-agentic-loop` | 用 slash command 触发 agent waves | 暂不采用；风险和适用场景偏内容生成 |
+
+核心结论：
+
+> LoopPilot 应该站在 loop-harness / looper 这一层，而不是 ralph / wiggum runner 这一层。
+
+---
+
+## 4. 目标用户
+
+### 4.1 MVP 用户
+
+MVP 用户是在 Codex 或 Claude Code 里工作的开发者或 vibe coding 用户：
+
+- 正在让 Codex / Claude Code 做代码任务。
+- 不确定任务是否适合反复执行。
+- 害怕 agent 越改越多、碰到危险模块、烧太多时间。
+- 希望 agent 先给出一个明确的 loop 判断和执行边界。
+
+典型问题：
+
+- “这个任务能不能让 Codex / Claude Code 一直修到测试过？”
+- “帮我检查项目有没有明显风险，但别乱改。”
+- “这个需求太大，能不能拆成安全的 loop？”
+- “哪些任务不应该交给 agent 自动跑？”
+
+### 4.2 非 MVP 用户
+
+暂不承诺：
+
+- 完全不使用 Codex、Claude Code 或终端的纯小白。
+- 需要团队权限、审计、预算平台的企业用户。
+- 需要长期定时任务、CI 事件触发、GitHub backlog agent 的团队。
+
+这些可以放到 v1/v2。
+
+---
+
+## 5. MVP 目标
 
 MVP 只验证一个核心假设：
 
-> 用户是否需要一个“帮我判断该不该 loop”的工具。
+> 用户在 Codex / Claude Code 里是否需要一个“Should I Loop?”能力。
 
 MVP 需要做到：
 
-1. 用户输入自然语言任务。
-2. LoopPilot 扫描本地项目的低风险元信息。
-3. 判断任务属于 `NO_LOOP`、`MANUAL_READONLY_AUDIT`、`SHORT_LOOP_DRY_RUN` 三类主决策之一；对高风险但可做元信息分析的任务，给出 `NO_LOOP_WITH_READONLY_BRIEF` 降级状态。
-4. 给出人话解释：为什么适合 / 不适合。
-5. 生成 loop spec、运行说明和报告模板。
-6. 对 `MANUAL_READONLY_AUDIT` 提供只读真实执行。
-7. 对涉及写操作的任务只生成 dry-run 计划、change plan 或 patch outline，不自动写入项目；只有用户显式开启 `--include-code` 后，才允许生成具体 patch proposal。
-8. 明确告诉用户哪些内容会发给模型，默认脱敏，用户可选择 opt-in。
+1. 用户在 Codex 或 Claude Code 中描述任务。
+2. LoopPilot 使用用户目标和当前 agent 已有上下文判断；repo scan 只是可选证据补充。
+3. LoopPilot 先输出可校验 JSON decision，再输出人话解释。
+4. LoopPilot 给出 `RUN_WITH_CONTRACT`、`PLAN_ONLY`、`NO_GO` 三类判断。
+5. 如果 `RUN_WITH_CONTRACT`，生成 loop contract，用户确认后当前 agent 直接执行。
+6. 如果 `PLAN_ONLY`，当前 agent 只生成计划和风险说明，不改代码。
+7. 如果 `NO_GO`，明确拒绝 loop，并给出安全替代方案。
+8. 每次判断都说明：为什么、会做什么、不会做什么、什么时候停。
+9. 同一任务在 Codex 和 Claude Code 中应得到一致的 decision 和 contract。
 
-### 3.3 v1 目标
+MVP 交互约束：
 
-在 MVP 验证成立后，再支持：
+- 最多澄清一次；仍不明确就返回 `PLAN_ONLY`。
+- 默认 chat-first，不写 `.looppilot/latest-contract.md` 或 `.looppilot/latest-report.md`。
+- 只有用户明确要求保存时，才写入文件。
+- 当前 agent 能力不明时，不能进入 `RUN_WITH_CONTRACT`。
 
-- 定时触发。
-- diff 事件触发。
-- Claude Code hooks / Codex approval / sandbox 等受控执行路径。
-- 编辑器插件或桌面壳，让更小白的用户不用命令行。
+MVP 不做：
 
-### 3.4 v2 目标
-
-扩展到非 coding 场景：
-
-- PRD 完整性检查。
-- Issue / 需求池 triage。
-- 用户反馈归因。
-- 竞品变化监控。
-- 实验复盘。
-
----
-
-## 4. 用户定位
-
-### 4.1 MVP 核心用户：半熟练开发者 / 早期 adopter
-
-MVP 是 CLI + 本地 Git 仓库形态，因此真实目标用户不是完全小白，而是：
-
-- 会打开终端。
-- 会进入一个本地代码仓库。
-- 正在使用或尝试 Claude Code / Codex / Cursor。
-- 不熟悉 loop engineering，但愿意尝试 AI 自动化。
-- 害怕 AI 乱改代码，希望先获得安全建议。
-
-典型需求：
-
-- “这个任务要不要让 AI 一直跑？”
-- “我想让 AI 检查项目有没有明显问题，但不要改代码。”
-- “我想让 AI 帮我修测试，但别直接乱改。”
-
-### 4.2 长期核心用户：vibe coding 小白
-
-长期目标用户更小白：
-
-- 会用 AI 生成代码，但不懂 Git、测试、CI、hook、agent 配置。
-- 想让 AI 多干活，但不知道如何控制风险。
-- 对 loop engineering 有兴趣，但不理解概念。
-
-这类用户需要桌面壳、编辑器插件或 Web UI。**不作为 CLI MVP 的首批用户承诺。**
-
-### 4.3 延展用户：AI PM / 团队负责人
-
-- 想把需求检查、Issue triage、文档巡检等重复工作变成可控 loop。
-- 关心权限、审计、成本和团队协作。
+- 不做独立 runner。
+- 不先做完整 CLI。
+- 不做 `run --readonly` 或任何真实后台执行命令。
+- 不接独立 AI provider。
+- 不实现 scheduled loop。
+- 不实现 GitHub issue queue。
+- 不自动 commit / push / merge / deploy。
+- 不做长期状态机。
+- 不把 export prompt 包装成受控执行。
+- 不默认写文件。
 
 ---
 
-## 5. MVP 范围
+## 6. 决策类型
 
-### 5.1 MVP 产品形态
+### 6.1 `NO_GO`
 
-MVP 采用 **本地 CLI + 文件产物**。
+不应该 loop。
 
-建议命令：
+适用：
 
-```bash
-looppilot ask "我想让 AI 每天检查这个项目有没有明显问题"
-looppilot scan
-looppilot recommend
-looppilot create
-looppilot run --readonly
-```
+- 目标过宽，例如“把项目做完”。
+- 没有客观验收标准，例如“直到没问题”。
+- 涉及支付、鉴权、权限、生产、数据删除、部署发布。
+- 需要架构级改造或高风险业务判断。
 
-### 5.2 MVP 支持环境
+行为：
 
-- 本地 Git 仓库。
-- Node / Python / Go / Java 等常见项目的基础识别。
-- 可选配置用户已有 LLM CLI/API。
-- 不接 GitHub App、CI、Slack、飞书、Jira、Notion。
+- 当前 agent 不进入循环执行。
+- 输出拒绝理由。
+- 给出更安全的拆分建议或只读分析建议。
 
-### 5.3 MVP 决策类型
+### 6.2 `PLAN_ONLY`
 
-| 类型 | 说明 | MVP 行为 |
-|---|---|---|
-| `NO_LOOP` | 不适合 loop | 不执行，给单次 prompt 或拆分建议 |
-| `NO_LOOP_WITH_READONLY_BRIEF` | 不适合 loop，但可做元信息级风险摘要 | 不进入标准 audit runner，只输出基于目录、配置、diff 摘要的只读 brief |
-| `MANUAL_READONLY_AUDIT` | 适合手动触发的只读巡检 | 可真实执行，只读扫描并生成报告 |
-| `SHORT_LOOP_DRY_RUN` | 适合短 loop，但涉及写操作或不确定风险 | 只生成 dry-run 计划、change plan、patch outline 或人工执行说明，不自动写 |
+可以让当前 agent 思考，但不应该直接执行。
 
-### 5.4 MVP 明确不做
+适用：
 
-- 不做真正 scheduled loop。
-- 不做 event-driven loop。
-- 不做 context refresh 自动写入。
-- 不自动修改业务代码。
-- 不自动安装依赖。
-- 不自动 git commit / push。
-- 不自动部署 / 发布。
-- 不把 Claude prompt/export 模式称为受控执行。
-- 不承诺 token 硬限制，只做估算提示。
+- 任务可能适合 loop，但当前信息不足。
+- 需要改代码，但风险或范围还没有收敛。
+- 用户要求修复/重构，但验收条件还不够明确。
 
-### 5.5 MVP 主线
+行为：
 
-第一版只做一条主线：
+- 当前 agent 生成计划、风险、建议文件、待确认步骤。
+- 不写业务代码。
+- 不运行危险命令。
+- 用户确认后，可重新进入 `RUN_WITH_CONTRACT` 判断。
 
-```text
-scan → recommend → create --export-only → run --readonly
-```
+### 6.3 `RUN_WITH_CONTRACT`
 
-其中：
+可以让当前 agent 在明确边界内执行短 loop。
 
-- `scan`：扫描项目元信息和低风险上下文。
-- `recommend`：判断该不该 loop。
-- `create --export-only`：生成 loop spec 和外部工具提示词。
-- `run --readonly`：只读执行一次巡检，生成报告。
+适用：
 
-### 5.6 只读巡检能力边界
+- 目标明确。
+- 有客观验收，例如测试命令、lint、类型检查、报告生成。
+- 风险可控。
+- 能设置停止条件。
 
-`MANUAL_READONLY_AUDIT` 是元信息级只读巡检，不是完整代码审计。
+行为：
 
-它可以发现：
+- 生成 loop contract。
+- 用户确认 contract。
+- 当前 agent 直接执行。
+- 执行结束后输出报告。
 
-- 项目结构、配置、测试脚本、CI、依赖声明中的明显风险信号。
-- 最近 diff 的文件规模、风险区域和敏感路径候选。
-- README / 配置 / 脚本之间的明显不一致。
-- 缺少测试脚本、缺少 CI、存在敏感文件候选等工程卫生问题。
+### 6.4 澄清规则
 
-它不会发现：
+LoopPilot 不是需求访谈工具。信息不足时可以问一次澄清问题，但最多一次：
 
-- 需要执行测试或构建后才能暴露的问题。
-- 需要读取完整业务代码才能判断的逻辑 bug。
-- 需要运行依赖审计、网络请求或外部服务才能确认的漏洞。
-- 需要访问 `.env`、密钥、生产配置或完整 diff 才能验证的问题。
-
-因此只读巡检报告必须包含：
-
-- `confidence`：本次结论的置信度。
-- `coverage`：本次实际检查了哪些范围。
-- `blind_spots`：本次没有检查、不能保证的范围。
+- 如果用户补充后目标、gate、风险仍不清楚，返回 `PLAN_ONLY`。
+- 如果任务涉及高风险区域，不能靠澄清问题绕过安全规则。
+- 如果当前 agent 能力不明，例如不能确认 approval、sandbox、permission 行为，返回 `PLAN_ONLY`。
 
 ---
 
-## 6. 关键用户流程
+## 7. Agent-native 用户流程
 
-### 6.1 不适合 loop
+### 7.1 不适合 loop
 
-用户输入：
+用户：
 
 ```text
 帮我自动重构支付模块，直到没有问题。
 ```
 
-系统输出：
+LoopPilot / current agent：
 
 ```text
-不建议开启 loop。
+NO_GO
+
+不建议 loop。
 
 原因：
 - 支付模块风险高。
-- “没有问题”不是可客观验证目标。
-- 可能涉及鉴权、订单、资金链路。
+- “没有问题”不是客观验收条件。
+- 可能涉及鉴权、订单、资金链路和生产数据。
 
-建议降级为：
-1. NO_LOOP_WITH_READONLY_BRIEF：只输出元信息级风险摘要，不进入标准 audit runner。
-2. 人工确认改造计划。
-3. 拆成单个子任务后再考虑 SHORT_LOOP_DRY_RUN。
+安全替代：
+1. 先做只读风险分析。
+2. 让人确认改造边界。
+3. 拆成一个有测试保护的小任务后再判断。
 ```
 
-### 6.2 适合只读巡检
+### 7.2 只做计划
 
-用户输入：
+用户：
 
 ```text
-帮我看看这个项目最近有没有明显风险，不要改代码。
+帮我把这个项目结构整理一下。
 ```
 
-系统输出：
+LoopPilot / current agent：
 
 ```text
-建议使用 MANUAL_READONLY_AUDIT。
+PLAN_ONLY
 
-说明：这是元信息级只读巡检，不是完整代码审计。
+这个任务可能有价值，但范围太宽，不建议直接执行。
 
-它会：
-- 读取项目结构、README、配置文件、最近 diff。
-- 检查测试缺口、危险依赖、敏感文件风险、大范围改动。
-- 生成一份报告。
+我会先输出：
+- 当前结构观察。
+- 风险区域。
+- 建议拆分。
+- 第一批可安全执行的小任务。
 
-它不会：
-- 修改代码。
-- 安装依赖。
-- 运行测试或构建。
-- 读取完整业务代码。
-- 执行 git commit / push。
-- 访问 .env 或密钥文件内容。
-
-报告会包含：confidence、coverage、blind_spots。
-
-是否运行一次只读巡检？
+不会修改文件。
 ```
 
-### 6.3 涉及写操作的短 loop
+### 7.3 可以短 loop
 
-用户输入：
+用户：
 
 ```text
-帮我修复这个失败测试，直到测试通过。
+帮我修复当前 failing test，最多试 5 轮。
 ```
 
-系统输出：
+LoopPilot / current agent：
 
 ```text
-建议使用 SHORT_LOOP_DRY_RUN。
+RUN_WITH_CONTRACT
 
-原因：目标相对明确，有测试作为验证条件，但涉及写代码，所以 MVP 不会自动修改文件。
+适合短 loop。
 
-我会生成：
-- 修复计划。
-- 建议阅读的文件。
-- 建议修改点。
-- 可复制给 Claude Code / Codex 的 dry-run prompt。
-- change plan 或 patch outline。
-- 人工确认后再执行的步骤。
+Loop contract:
+- Goal: 修复当前 failing test。
+- Gate: 测试命令通过。
+- Max rounds: 5。
+- Stop: 测试通过、连续两轮无进展、触发危险文件、用户中断。
+- Never do: 不修改 auth/payment/secrets，不安装依赖，不 commit/push。
 
-如果你使用 --include-code 明确允许读取必要代码片段，我才会生成更具体的 patch proposal。
+确认后我将按 contract 执行。
 ```
 
 ---
 
-## 7. 安全承诺
+## 8. Loop Contract
 
-### 7.1 MVP 安全边界
+Loop contract 是当前 agent 执行前必须确认的短文档，不是复杂标准。
 
-LoopPilot MVP 的安全承诺必须和执行方式匹配。
+每次判断必须先输出机器可校验 JSON，再输出人话解释。JSON 至少包含：
 
-| 执行方式 | 是否受控执行 | MVP 说明 |
-|---|---|---|
-| Export / Prompt | 否 | 只生成给 Claude Code / Codex 的提示词或 run.md，不承诺强制拦截 |
-| Internal Read-only Run | 是，受 LoopPilot 自身限制 | 仅扫描和生成报告，不写项目文件 |
-| Controlled Execution | v1+ | 只有接入外部工具的 sandbox / approval / hooks 并验证有效后，才可称为受控执行 |
-
-### 7.2 默认风险策略
-
-| 风险行为 | MVP 策略 |
-|---|---|
-| 删除文件 | 阻止，不生成自动执行步骤 |
-| 修改 .env / secrets | 阻止，不读取内容 |
-| 安装依赖 | 不执行，只提示人工确认 |
-| 修改 auth / payment / permission 模块 | 降级为 `NO_LOOP_WITH_READONLY_BRIEF`，只输出元信息级风险摘要 |
-| 写业务代码 | dry-run，不自动写入 |
-| git commit | 不执行 |
-| git push | 不执行 |
-| 部署 / 发布 | 不执行 |
-| 外部网络请求 | 默认不执行 |
-
-### 7.3 预算控制
-
-MVP 能强制的限制：
-
-- 最大运行时间。
-- 最大扫描文件数。
-- 最大 diff 行数。
-- 最大输出报告大小。
-- 最大 loop 轮次，MVP 默认 1 轮。
-
-MVP 只能估算的限制：
-
-- token 消耗。
-- 外部 CLI / 订阅模型真实成本。
-
-因此文案必须写成：
-
-> 预计 token 消耗：xx。LoopPilot 无法强制限制外部 CLI 的真实 token 消耗，除非该执行路径明确支持预算拦截。
-
----
-
-## 8. 隐私和代码外发策略
-
-### 8.1 默认原则
-
-LoopPilot 是“小白安全工具”，所以默认必须保守：
-
-1. 默认本地扫描。
-2. 默认只发送摘要，不发送完整代码。
-3. 默认脱敏。
-4. 默认不读取 `.env`、密钥、证书、私钥、token 文件内容。
-5. 发送给模型前必须展示摘要清单。
-6. 用户显式 opt-in 后，才允许发送更多上下文。
-
-### 8.2 扫描内容分级
-
-| 级别 | 内容 | 默认是否可发送给模型 |
-|---|---|---|
-| L0 元信息 | 语言、框架、文件数量、目录结构摘要 | 可发送 |
-| L1 配置摘要 | package.json 依赖名、测试命令候选、CI 类型 | 可发送，但脱敏 |
-| L2 文档摘要 | README 摘要、注释摘要 | 可发送摘要，不默认发送全文 |
-| L3 diff 摘要 | 最近 diff 的文件名、变更规模、风险分类 | 可发送摘要，不默认发送完整 diff |
-| L4 代码片段 | 具体代码内容 | 默认不发送，需要 opt-in |
-| L5 敏感内容 | .env、secrets、证书、私钥、token、生产配置 | 永不发送，默认不读取 |
-
-### 8.3 用户可见提示
-
-运行前必须展示：
-
-```text
-本次将发送给模型的内容：
-- 项目类型：Node.js / TypeScript
-- 目录结构摘要：已脱敏
-- 依赖摘要：仅包名和版本
-- 最近 diff 摘要：仅文件名和变更行数
-
-不会发送：
-- .env 内容
-- 密钥文件
-- 完整源代码
-- 完整 diff
-
-如需让模型读取具体代码片段，请使用 --include-code 明确开启。
+```json
+{
+  "decision": "RUN_WITH_CONTRACT",
+  "confidence": "medium",
+  "needs_clarification": false,
+  "clarifying_question": null,
+  "host_capabilities": {
+    "host": "codex",
+    "can_edit_files": true,
+    "can_run_commands": true,
+    "has_approval_flow": true,
+    "capability_confidence": "known"
+  },
+  "reasons": [],
+  "contract": {}
+}
 ```
 
-### 8.4 模型调用确认模式
+如果 `host_capabilities.capability_confidence` 不是 `known`，默认不能返回 `RUN_WITH_CONTRACT`。
 
-MVP 提供三种隐私确认模式：
+必须包含：
 
-| 模式 | 行为 | 适用场景 |
-|---|---|---|
-| `local-only` | 只使用本地规则和扫描摘要，不调用模型 | 用户未配置模型、或不希望任何内容外发 |
-| `interactive` | 生成 `privacy-preview.md`，用户确认后才发送摘要 | 默认模式 |
-| `--send-summary` | 命令行显式允许发送 L0-L3 摘要 | 自动化脚本或熟练用户 |
+- `decision`: `RUN_WITH_CONTRACT` / `PLAN_ONLY` / `NO_GO`
+- `goal`: 本次目标
+- `scope`: 允许看的范围
+- `allowed_actions`: 允许动作
+- `forbidden_actions`: 禁止动作
+- `gate`: 验收方式
+- `stop_conditions`: 停止条件
+- `max_rounds`: 最大轮次
+- `host_capabilities`: 当前 agent 能力判断
+- `human_confirmations`: 需要人工确认的动作
+- `report`: 结束报告格式
 
-`--include-code` 是单独的高风险开关，只允许发送必要 L4 代码片段或完整 diff 片段；即使开启，也仍然禁止读取或发送 L5 敏感内容。
-
----
-
-## 9. Loop Spec 产物
-
-MVP 生成以下文件：
+MVP 默认直接在 Codex / Claude Code session 中生成并执行。文件只是显式保存选项，不是默认行为：
 
 ```text
 .looppilot/
-  project-scan.json
-  privacy-preview.md
-  recommendations.md
-  loops/
-    <loop-name>/
-      loop.yaml
-      run.md
-      report-template.md
-  runs/
-    <run-id>/
-      report.md
-      log.jsonl
+  core/
+    qualification-rules.md
+    decision-schema.json
+    contract-template.md
+  fixtures/
+    decision-fixtures.jsonl
+  latest-contract.md
+  latest-report.md
 ```
 
-`loop.yaml` 必须包含：
+Agent wrapper 可以放在：
 
-- goal
-- decision_type
-- mode
-- context_policy
-- allowed_actions
-- forbidden_actions
-- verification
-- stop_condition
-- budget_estimate
-- privacy_policy
-- execution_mode
-- user_confirmation
+```text
+.agents/skills/looppilot/SKILL.md        # Codex
+.claude/skills/looppilot/SKILL.md        # Claude Code
+.claude/commands/should-loop.md          # Claude Code 可选兼容入口
+```
+
+只有当用户需要跨工具复用时，才导出：
+
+```text
+.looppilot/
+  exports/
+    RUN_IN_CODEX.md
+    RUN_IN_CLAUDE.md
+    github-issue.md
+```
 
 ---
 
-## 10. 成功指标
+## 9. 安全原则
 
-### 10.1 MVP 产品指标
+MVP 默认规则：
 
-| 指标 | 目标 |
+| 行为 | 默认策略 |
 |---|---|
-| 用户理解度 | 用户能复述“它会做什么 / 不会做什么” |
-| 推荐接受率 | > 40% |
-| 危险任务降级 / 拒绝准确率 | > 90% |
-| 只读巡检成功生成报告率 | > 70% |
-| 用户愿意复制 spec 给 Claude/Codex 的比例 | > 30% |
+| 删除文件 | `NO_GO` 或强确认 |
+| 修改 `.env` / secrets | 禁止 |
+| 修改 auth / payment / permission | `NO_GO` 或 `PLAN_ONLY` |
+| 安装依赖 | `PLAN_ONLY`，除非用户确认 |
+| git commit | 不自动执行 |
+| git push | 不自动执行 |
+| deploy / publish | 不执行 |
+| 无测试保护的大改动 | `PLAN_ONLY` |
+| 目标过宽 | `NO_GO` 或拆分 |
+| host 能力不明 | `PLAN_ONLY` |
+| 用户未要求保存文件 | 不写文件 |
 
-### 10.2 MVP 质量指标
-
-| 指标 | 目标 |
-|---|---|
-| 无停止条件的 spec | 0 |
-| 无隐私预览的模型调用 | 0 |
-| 未经确认发送完整代码 | 0 |
-| 未经确认的项目文件写入 | 0 |
-| 把 export/prompt 模式误称为受控执行 | 0 |
-| 读取 L5 敏感文件内容 | 0 |
-| 只读巡检报告缺失 coverage / blind_spots | 0 |
+安全判断来自 LoopPilot 的本地规则和 contract，不来自 agent 自我感觉。
 
 ---
 
-## 11. 产品路线
+## 10. MVP 验证方式
 
-### v0.1：判断和只读巡检
+v0 不靠“看起来能用”验证，而靠一组固定任务集验证。
 
-- CLI。
-- scan / recommend / create / run --readonly。
-- 三类主决策：NO_LOOP、MANUAL_READONLY_AUDIT、SHORT_LOOP_DRY_RUN；以及高风险降级状态 NO_LOOP_WITH_READONLY_BRIEF。
-- 默认隐私预览。
-- 只读真实执行。
+必须有：
 
-### v0.2：更好的 export 体验
+- 至少 45 个 decision fixture，覆盖 `NO_GO`、`PLAN_ONLY`、`RUN_WITH_CONTRACT`。
+- 所有 decision 输出必须通过 `decision-schema.json` 校验。
+- 同一 fixture 在 Codex wrapper 和 Claude Code wrapper 中输出同一 decision。
+- 每个 `RUN_WITH_CONTRACT` 都必须包含 gate、stop conditions、forbidden actions。
+- 每个 `RUN_WITH_CONTRACT` 都必须包含已知 host capability profile。
+- 每个高风险 fixture 都必须 fail closed：宁可 `PLAN_ONLY` / `NO_GO`，不能误进 `RUN_WITH_CONTRACT`。
+- 每次改规则、改 wrapper，都跑 fixture 回归。
 
-- Claude Code run.md。
-- Codex prompt.md。
-- change plan / patch outline 模板。
-- 更细的风险解释。
-
-### v1：受控执行
-
-只有满足以下条件才进入 v1：
-
-- 外部工具能力可检测。
-- sandbox / approval / hooks 能被程序化验证。
-- LoopPilot 能确认写操作被拦截或需要人工确认。
-
-v1 才支持：
-
-- 真正 SHORT_LOOP。
-- 定时只读巡检。
-- diff 事件触发。
-- hooks / approval 集成。
-
-### v2：小白入口
-
-- 桌面壳。
-- 编辑器插件。
-- “Loop this” 按钮。
-- 非 coding 场景。
+这比先写 CLI 更重要，因为 LoopPilot 的核心价值是“判断正确”，不是“命令漂亮”。
 
 ---
 
-## 12. 收敛后的 MVP 定义
+## 11. 成功指标
 
-**LoopPilot MVP 是一个本地 CLI，帮助用户判断任务是否适合 loop，并生成安全、可解释、可复制执行的 loop spec；MVP 只支持只读巡检的真实执行，写操作全部停留在 dry-run / 人工确认。**
+MVP 产品指标：
 
-第一版不追求“自动把事情做完”，只验证：
+- 用户能理解为什么是 `RUN_WITH_CONTRACT` / `PLAN_ONLY` / `NO_GO`。
+- 用户愿意让 Codex / Claude Code 按 contract 执行 `RUN_WITH_CONTRACT` 任务。
+- 危险任务不会进入 `RUN_WITH_CONTRACT`。
+- `RUN_WITH_CONTRACT` 任务都有 gate 和 stop conditions。
+- 用户觉得 contract 比直接 prompt 更安全、更清楚。
+- 同一个任务在 Codex 和 Claude Code 中不会产生明显不同的安全判断。
 
-> 用户是否真的需要一个帮他判断“要不要 loop”的产品。
+MVP 质量指标：
+
+- 无 gate 的 `RUN_WITH_CONTRACT`：0。
+- 无 stop conditions 的 `RUN_WITH_CONTRACT`：0。
+- auth/payment/production 任务误判为 `RUN_WITH_CONTRACT`：0。
+- 自动 commit / push / deploy：0。
+- 当前 agent 执行前未展示 contract：0。
+- JSON decision schema 校验失败：0。
+- host 能力不明却进入 `RUN_WITH_CONTRACT`：0。
+- 用户未要求保存却写入文件：0。
+
+---
+
+## 12. 路线图
+
+### v0：Agent-native loop-check
+
+- 提供共享 LoopPilot core。
+- 提供 `decision-schema.json`。
+- 提供 Codex skill wrapper。
+- 提供 Claude Code skill wrapper。
+- 提供 Claude Code command alias，但只引用 skill，不复制逻辑。
+- 提供 45 个 decision fixture。
+- 在 Codex / Claude Code 中完成 `RUN_WITH_CONTRACT` / `PLAN_ONLY` / `NO_GO`。
+- 生成同一格式的 loop contract。
+- 当前 agent 直接按 contract 执行短 loop。
+- 默认不写文件；用户要求保存时才写入 `.looppilot/latest-contract.md` 和 `.looppilot/latest-report.md`。
+
+### v0.1：Repo scan helper
+
+- 增加只读 repo scan 小脚本。
+- 只输出安全摘要，不直接执行 loop。
+- 用 scan summary 辅助 decision fixture 和 contract 生成。
+
+### v0.2：Export fallback
+
+- 生成 `RUN_IN_CODEX.md`。
+- 生成 `RUN_IN_CLAUDE.md`。
+- 生成 `github-issue.md`。
+
+### v1：Reusable loop artifacts
+
+- 引入 `VISION.md` / `STATE.md` / `RUN_LOG.md`。
+- 支持反复运行的手动 loop。
+- 借鉴 loop-harness 的 verifier / review gate。
+
+### v2：Orchestration integration
+
+- GitHub issue queue。
+- scheduled loop。
+- Codex sandbox / approval 检测。
+- Claude Code hooks / permission 检测。
+- 团队权限和审计。
+
+---
+
+## 13. 收敛后的 MVP 定义
+
+**LoopPilot v0 是一套跨 Codex / Claude Code 的 agent-native LoopPilot Pack：共享规则、decision schema、contract 模板和 fixtures，分别用 Codex skill 与 Claude Code skill 承载。它不做 runner，不接独立 AI provider，不要求用户复制 prompt 给 agent，默认不写文件。它先用可校验 JSON 判断任务该不该 loop，再让当前 agent 按明确 contract 执行。**
