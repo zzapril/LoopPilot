@@ -6,7 +6,7 @@ Last updated: 2026-06-26
 
 - [x] Shared core protocol: qualification rules, decision schema, contract template, and 45 decision fixtures.
 - [x] Fixture validator and verification scripts.
-- [ ] Codex and Claude Code wrappers.
+- [x] Codex and Claude Code wrappers.
 - [ ] Install and doctor commands.
 - [ ] Final verification and push.
 

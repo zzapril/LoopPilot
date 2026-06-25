@@ -6,6 +6,7 @@
   "description": "Agent-native loop qualification pack for Codex and Claude Code.",
   "scripts": {
     "validate:fixtures": "node scripts/validate-fixtures.mjs",
-    "test": "node scripts/validate-fixtures.mjs"
+    "validate:wrappers": "node scripts/validate-wrappers.mjs",
+    "test": "node scripts/validate-all.mjs"
   }
 }
