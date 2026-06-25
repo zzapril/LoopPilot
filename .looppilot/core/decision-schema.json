@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://looppilot.local/schemas/decision-schema.json",
+  "title": "LoopPilot Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decision",
+    "confidence",
+    "needs_clarification",
+    "clarifying_question",
+    "host_capabilities",
+    "reasons",
+    "safe_alternative",
+    "next_prompt",
+    "plan_outputs",
+    "required_user_confirmation",
+    "contract"
+  ],
+  "properties": {
+    "decision": {
+      "enum": ["NO_GO", "PLAN_ONLY", "RUN_WITH_CONTRACT"]
+    },
+    "confidence": {
+      "enum": ["low", "medium", "high"]
+    },
+    "needs_clarification": {
+      "type": "boolean"
+    },
+    "clarifying_question": {
+      "type": ["string", "null"]
+    },
+    "host_capabilities": {
+      "$ref": "#/$defs/hostCapabilities"
+    },
+    "reasons": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "safe_alternative": {
+      "type": ["string", "null"]
+    },
+    "next_prompt": {
+      "type": ["string", "null"]
+    },
+    "plan_outputs": {
+      "type": "array",
+      "items": {
+        "enum": ["risk_analysis", "task_breakdown", "candidate_gate", "read_only_review", "implementation_plan"]
+      },
+      "uniqueItems": true
+    },
+    "required_user_confirmation": {
+      "type": "array",
+      "items": {
+        "enum": ["dependency_install", "large_diff", "config_change", "risky_path", "write_files", "run_commands", "save_files"]
+      },
+      "uniqueItems": true
+    },
+    "contract": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": [
+        "goal",
+        "scope",
+        "allowed_actions",
+        "forbidden_actions",
+        "gate",
+        "stop_conditions",
+        "max_rounds",
+        "host_capabilities",
+        "human_confirmations",
+        "report"
+      ],
+      "properties": {
+        "goal": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["include", "exclude"],
+          "properties": {
+            "include": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "exclude": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "allowed_actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": ["read_files", "edit_small_scope", "run_test_command", "run_lint_command", "create_report", "ask_user"]
+          },
+          "uniqueItems": true
+        },
+        "forbidden_actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": ["edit_secrets", "change_auth_or_payment", "install_dependencies", "git_commit", "git_push", "deploy", "delete_files", "large_refactor"]
+          },
+          "uniqueItems": true
+        },
+        "gate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "command", "expect"],
+          "properties": {
+            "type": {
+              "enum": ["command", "checklist", "file_output", "report_review"]
+            },
+            "command": {
+              "type": ["string", "null"]
+            },
+            "expect": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "stop_conditions": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "enum": ["gate_passes", "max_rounds_reached", "same_failure_twice", "forbidden_action_needed", "user_interrupt", "scope_expands", "no_progress"]
+          },
+          "uniqueItems": true
+        },
+        "max_rounds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "host_capabilities": {
+          "$ref": "#/$defs/hostCapabilities"
+        },
+        "human_confirmations": {
+          "type": "array",
+          "items": {
+            "enum": ["dependency_install", "large_diff", "config_change", "risky_path", "write_files", "run_commands", "save_files"]
+          },
+          "uniqueItems": true
+        },
+        "report": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "enum": ["what_changed", "commands_run", "gate_result", "risks_or_blockers", "next_steps", "files_touched", "rounds_used"]
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "hostCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "host",
+        "can_edit_files",
+        "can_run_commands",
+        "has_approval_flow",
+        "supports_skills_or_commands",
+        "capability_confidence"
+      ],
+      "properties": {
+        "host": {
+          "enum": ["codex", "claude_code", "unknown"]
+        },
+        "can_edit_files": {
+          "type": "boolean"
+        },
+        "can_run_commands": {
+          "type": "boolean"
+        },
+        "has_approval_flow": {
+          "type": "boolean"
+        },
+        "supports_skills_or_commands": {
+          "type": "boolean"
+        },
+        "capability_confidence": {
+          "enum": ["known", "unknown"]
+        }
+      }
+    }
+  }
+}

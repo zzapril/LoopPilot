@@ -1,0 +1,17 @@
+# LoopPilot Implementation Progress
+
+Last updated: 2026-06-26
+
+## Feature Progress
+
+- [x] Shared core protocol: qualification rules, decision schema, contract template, and 45 decision fixtures.
+- [ ] Fixture validator and verification scripts.
+- [ ] Codex and Claude Code wrappers.
+- [ ] Install and doctor commands.
+- [ ] Final verification and push.
+
+## Notes
+
+- v0 is chat-first and agent-native.
+- File writes are explicit-save only.
+- `RUN_WITH_CONTRACT` requires known host capabilities, objective gate, bounded rounds, stop conditions, and forbidden actions.
