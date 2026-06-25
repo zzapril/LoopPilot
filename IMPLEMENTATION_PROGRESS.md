@@ -5,7 +5,7 @@ Last updated: 2026-06-26
 ## Feature Progress
 
 - [x] Shared core protocol: qualification rules, decision schema, contract template, and 45 decision fixtures.
-- [ ] Fixture validator and verification scripts.
+- [x] Fixture validator and verification scripts.
 - [ ] Codex and Claude Code wrappers.
 - [ ] Install and doctor commands.
 - [ ] Final verification and push.

@@ -1,0 +1,11 @@
+{
+  "name": "looppilot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent-native loop qualification pack for Codex and Claude Code.",
+  "scripts": {
+    "validate:fixtures": "node scripts/validate-fixtures.mjs",
+    "test": "node scripts/validate-fixtures.mjs"
+  }
+}
