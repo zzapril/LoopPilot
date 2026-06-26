@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import { readJsonFile, readJsonlFile, validateFixtureSet } from "./lib/decision-validator.mjs";
 import { validateDecisionAgainstSchema, validateDecisionSchemaDefinition } from "./lib/schema-validator.mjs";
 import { validateWrappers } from "./lib/wrapper-validator.mjs";
@@ -27,12 +28,18 @@ const claudeFiles = [
   ".claude/commands/should-loop.md",
 ];
 
+const wrapperFilesByTarget = {
+  both: [...codexFiles, ...claudeFiles],
+  codex: codexFiles,
+  claude: claudeFiles,
+};
+
 function printHelp() {
   console.log(`LoopPilot
 
 Usage:
   looppilot install [--target both|codex|claude] [--scope project] [--cwd <path>] [--force] [--dry-run]
-  looppilot doctor [--target both|codex|claude] [--cwd <path>] [--json]
+  looppilot doctor [--target both|codex|claude] [--cwd <path>] [--json] [--output <path>]
   looppilot export --target codex|claude|github-issue [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-contract --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-report --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
@@ -203,11 +210,33 @@ function saveExplicitFile(options, kind) {
   if (options.dryRun) console.log("Dry run: no file written.");
 }
 
+function getShortCommit(root) {
+  const result = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) return null;
+  const commit = result.stdout.trim();
+  return commit || null;
+}
+
+function getPackageMetadata() {
+  const packageJson = readJsonFile(path.join(packageRoot, "package.json"));
+  return {
+    packageName: packageJson.name ?? null,
+    packageVersion: packageJson.version ?? null,
+  };
+}
+
 function doctor(options) {
+  const startedAt = process.hrtime.bigint();
   const targetRoot = path.resolve(options.cwd);
   const files = filesForTarget(options.target);
   const errors = [];
   const checks = [];
+  const { packageName, packageVersion } = getPackageMetadata();
+  let fixtureSummary = { total: 0, counts: { NO_GO: 0, PLAN_ONLY: 0, RUN_WITH_CONTRACT: 0 } };
 
   function recordCheck(name, checkErrors) {
     checks.push({ name, passed: checkErrors.length === 0, errors: checkErrors });
@@ -222,6 +251,7 @@ function doctor(options) {
       const schema = readJsonFile(path.join(targetRoot, ".looppilot/core/decision-schema.json"));
       const fixtures = readJsonlFile(path.join(targetRoot, ".looppilot/fixtures/decision-fixtures.jsonl"));
       const fixtureResult = validateFixtureSet(fixtures);
+      fixtureSummary = { total: fixtureResult.total, counts: fixtureResult.counts };
       recordCheck("fixtures", fixtureResult.errors);
       recordCheck("schema definition", validateDecisionSchemaDefinition(schema));
       const schemaDecisionErrors = [];
@@ -247,16 +277,29 @@ function doctor(options) {
     }
   }
 
+  const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
   const report = {
     ok: errors.length === 0,
     target: options.target,
     project: targetRoot,
+    commit: getShortCommit(targetRoot),
+    package_name: packageName,
+    package_version: packageVersion,
+    fixture_total: fixtureSummary.total,
+    fixture_counts: fixtureSummary.counts,
+    wrapper_files: wrapperFilesByTarget[options.target],
+    core_files: coreFiles,
+    duration_ms: Math.round(durationMs),
     checks,
   };
 
   if (options.json) {
     const output = JSON.stringify(report, null, 2);
-    if (errors.length > 0) console.error(output);
+    if (options.output) {
+      const outputPath = path.resolve(targetRoot, options.output);
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+      fs.writeFileSync(outputPath, `${output}\n`);
+    } else if (errors.length > 0) console.error(output);
     else console.log(output);
   } else if (errors.length > 0) {
     console.error("LoopPilot doctor failed:");
@@ -288,7 +331,6 @@ try {
   } else if (options.command === "save-report") {
     saveExplicitFile(options, "report");
   } else if (options.command === "scan") {
-    const { spawnSync } = await import("node:child_process");
     const targetRoot = path.resolve(options.cwd);
     const scriptPath = path.join(targetRoot, ".looppilot/scripts/scan-summary.mjs");
     if (!fs.existsSync(scriptPath)) throw new Error("Scan helper is missing: .looppilot/scripts/scan-summary.mjs");
