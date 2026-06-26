@@ -89,7 +89,7 @@ if (result.status !== 0) {
       errors.push("npm pack did not report a tarball filename");
     } else {
       const tarballPath = path.join(packDir, packedFileName);
-      const npmInstall = spawnSync("npm", ["install", tarballPath, "--ignore-scripts"], {
+      const npmInstall = spawnSync("npm", ["install", tarballPath, "--ignore-scripts", "--no-audit", "--no-fund"], {
         cwd: installDir,
         encoding: "utf8",
         env: {

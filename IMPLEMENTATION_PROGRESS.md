@@ -8,7 +8,7 @@ Last updated: 2026-06-27
 - [x] Fixture validator and verification scripts.
 - [x] Codex and Claude Code wrappers.
 - [x] Install and enhanced doctor commands with per-check pass/fail output.
-- [x] Runtime JSON Schema, Ajv cross-check, and schema drift validation for fixture decisions and schema enums.
+- [x] Runtime JSON Schema, Ajv cross-check, schema drift validation, and safety negative probes for fixture decisions and schema enums.
 - [x] Wrapper parity validation for Codex and Claude Code guardrails/workflow.
 - [x] Fixture coverage report for decision distribution, high-risk keyword coverage, and taxonomy coverage.
 - [x] Optional read-only repo scan helper with sensitive path reporting and no secret content reads.
@@ -16,8 +16,8 @@ Last updated: 2026-06-27
 - [x] Explicit export fallback templates and `looppilot export` command.
 - [x] Export command integration validation for all targets, dry-run, explicit output, duplicate protection, and force overwrite.
 - [x] Report and review-gate templates plus explicit `save-contract`, `save-report`, and `save-review-gate` commands for user-requested latest files.
-- [x] Package contents and docs consistency validation.
-- [x] CLI argument validation including top-level help.
+- [x] Package contents and docs consistency validation, including local packed-tarball install smoke checks.
+- [x] CLI argument validation including top-level help and command-specific unsupported option rejection.
 
 ## v1 Manual Artifact Progress
 

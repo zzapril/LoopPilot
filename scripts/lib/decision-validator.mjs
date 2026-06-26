@@ -72,6 +72,15 @@ const REQUIRED_TOP_LEVEL = [
   "contract",
 ];
 
+const HOST_CAPABILITY_KEYS = [
+  "host",
+  "can_edit_files",
+  "can_run_commands",
+  "has_approval_flow",
+  "supports_skills_or_commands",
+  "capability_confidence",
+];
+
 function fail(errors, path, message) {
   errors.push(`${path}: ${message}`);
 }
@@ -219,8 +228,33 @@ export function validateContract(contract, decisionHost, path = "contract") {
   }
 
   errors.push(...validateHostCapabilities(contract.host_capabilities, `${path}.host_capabilities`));
-  if (decisionHost && contract.host_capabilities?.host !== decisionHost.host) {
-    fail(errors, `${path}.host_capabilities.host`, "must match decision host");
+  if (decisionHost && isObject(contract.host_capabilities)) {
+    for (const key of HOST_CAPABILITY_KEYS) {
+      if (contract.host_capabilities[key] !== decisionHost[key]) {
+        fail(errors, `${path}.host_capabilities.${key}`, "must match decision host capabilities");
+      }
+    }
+  }
+
+  if (contract.host_capabilities?.host === "unknown") {
+    fail(errors, `${path}.host_capabilities.host`, "cannot be unknown for RUN_WITH_CONTRACT");
+  }
+  if (contract.host_capabilities?.supports_skills_or_commands !== true) {
+    fail(errors, `${path}.host_capabilities.supports_skills_or_commands`, "must be true for RUN_WITH_CONTRACT");
+  }
+  if (contract.allowed_actions?.includes("edit_small_scope") && contract.host_capabilities?.can_edit_files !== true) {
+    fail(errors, `${path}.host_capabilities.can_edit_files`, "must be true when the contract allows edits");
+  }
+  if (
+    (contract.allowed_actions?.includes("run_test_command")
+      || contract.allowed_actions?.includes("run_lint_command")
+      || contract.gate?.type === "command")
+    && contract.host_capabilities?.can_run_commands !== true
+  ) {
+    fail(errors, `${path}.host_capabilities.can_run_commands`, "must be true when the contract uses command gates");
+  }
+  if (Array.isArray(contract.human_confirmations) && contract.human_confirmations.length > 0 && contract.host_capabilities?.has_approval_flow !== true) {
+    fail(errors, `${path}.host_capabilities.has_approval_flow`, "must be true when the contract requires human confirmations");
   }
 
   validateStringArray(contract.human_confirmations, CONFIRMATIONS, `${path}.human_confirmations`, errors);
@@ -275,6 +309,15 @@ export function validateDecision(decision, path = "decision") {
     }
     if (decision.host_capabilities?.capability_confidence !== "known") {
       fail(errors, `${path}.host_capabilities.capability_confidence`, "must be known for RUN_WITH_CONTRACT");
+    }
+    if (decision.host_capabilities?.host === "unknown") {
+      fail(errors, `${path}.host_capabilities.host`, "cannot be unknown for RUN_WITH_CONTRACT");
+    }
+    if (decision.host_capabilities?.supports_skills_or_commands !== true) {
+      fail(errors, `${path}.host_capabilities.supports_skills_or_commands`, "must be true for RUN_WITH_CONTRACT");
+    }
+    if (Array.isArray(decision.required_user_confirmation) && decision.required_user_confirmation.length > 0 && decision.host_capabilities?.has_approval_flow !== true) {
+      fail(errors, `${path}.host_capabilities.has_approval_flow`, "must be true when user confirmation is required");
     }
     errors.push(...validateContract(decision.contract, decision.host_capabilities, `${path}.contract`));
   } else if (decision.contract !== null) {

@@ -22,6 +22,9 @@ for (const [args, expected] of [
   [["export", "--target"], "Missing value for --target."],
   [["save-report", "--from"], "Missing value for --from."],
   [["doctor", "--unknown"], "Unknown argument: --unknown"],
+  [["install", "--json", "--dry-run"], "install does not support --json."],
+  [["save-vision", "--target", "claude", "--from", "README.md", "--dry-run"], "save-vision does not support --target."],
+  [["scan", "--target", "both"], "scan does not support --target."],
 ]) {
   const result = run(args);
   const output = `${result.stderr}${result.stdout}`;

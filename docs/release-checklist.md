@@ -16,7 +16,8 @@ Current status: `0.1.0` is prepared for local release review. `npm publish` has 
 ## Validation
 
 - [x] Run `npm test` and confirm it exits successfully.
-- [x] Confirm `npm test` includes packed CLI runtime smoke checks for help, doctor, install dry-run, and local tarball bin install.
+- [x] Confirm schema validation includes safety negative probes for invalid `RUN_WITH_CONTRACT` host capabilities.
+- [x] Confirm `npm test` includes packed CLI runtime smoke checks for help, doctor, install dry-run, command-specific argument rejection, and local tarball bin install.
 - [x] Run `npm run eval:wrapper-parity` and confirm golden wrapper output parity passes.
 - [x] Run `node scripts/looppilot.mjs doctor --target both --json` and confirm metadata includes core files, installed file counts, and hashes.
 - [x] Run `env npm_config_cache=/private/tmp/looppilot-npm-cache npm pack --dry-run` and review the listed files.

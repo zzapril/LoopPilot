@@ -45,6 +45,16 @@ function expectFailure(label, validatorName, validatorErrors) {
   }
 }
 
+function expectPass(label, validatorName, validatorErrors) {
+  if (validatorErrors.length > 0) {
+    errors.push(`${label}: expected ${validatorName} to pass, got ${validatorErrors.length} error(s)`);
+    errors.push(...validatorErrors.map((error) => `${label}: ${validatorName}: ${error}`));
+  }
+}
+
+let schemaNegativeProbeCount = 0;
+let safetyNegativeProbeCount = 0;
+
 fixtures.forEach((fixture, index) => {
   const label = `fixtures[${index}].expected_decision`;
   const { ajvErrors, localErrors } = compareSchemaValidators(label, fixture.expected_decision);
@@ -114,6 +124,7 @@ if (!runDecision || !nonRunDecision) {
   ];
 
   negativeCases.forEach((negativeCase) => {
+    schemaNegativeProbeCount += 1;
     const decision = clone(negativeCase.base);
     negativeCase.mutate(decision);
     const { ajvErrors, localErrors } = compareSchemaValidators(negativeCase.label, decision);
@@ -122,6 +133,55 @@ if (!runDecision || !nonRunDecision) {
     expectFailure(negativeCase.label, "Ajv", ajvErrors);
     expectFailure(negativeCase.label, "local schema", localErrors);
     expectFailure(negativeCase.label, "combined validator", combinedErrors);
+  });
+
+  const safetyNegativeCases = [
+    {
+      label: "safety.run_with_unknown_host",
+      mutate(decision) {
+        decision.host_capabilities.host = "unknown";
+        decision.contract.host_capabilities.host = "unknown";
+      },
+    },
+    {
+      label: "safety.run_with_edit_without_edit_capability",
+      mutate(decision) {
+        decision.host_capabilities.can_edit_files = false;
+        decision.contract.host_capabilities.can_edit_files = false;
+      },
+    },
+    {
+      label: "safety.run_with_command_gate_without_command_capability",
+      mutate(decision) {
+        decision.host_capabilities.can_run_commands = false;
+        decision.contract.host_capabilities.can_run_commands = false;
+      },
+    },
+    {
+      label: "safety.run_with_confirmation_without_approval_flow",
+      mutate(decision) {
+        decision.host_capabilities.has_approval_flow = false;
+        decision.contract.host_capabilities.has_approval_flow = false;
+      },
+    },
+    {
+      label: "safety.contract_capabilities_must_match_decision",
+      mutate(decision) {
+        decision.contract.host_capabilities.supports_skills_or_commands = false;
+      },
+    },
+  ];
+
+  safetyNegativeCases.forEach((negativeCase) => {
+    safetyNegativeProbeCount += 1;
+    const decision = clone(runDecision);
+    negativeCase.mutate(decision);
+    const { ajvErrors, localErrors } = compareSchemaValidators(negativeCase.label, decision);
+    const combinedErrors = validateDecisionAgainstSchema(decision, schema, negativeCase.label);
+
+    expectPass(negativeCase.label, "Ajv", ajvErrors);
+    expectPass(negativeCase.label, "local schema", localErrors);
+    expectFailure(negativeCase.label, "combined safety validator", combinedErrors);
   });
 }
 
@@ -134,4 +194,5 @@ if (errors.length > 0) {
 console.log("LoopPilot Ajv schema validation passed.");
 console.log(`Fixtures checked: ${fixtures.length}`);
 console.log("Draft: 2020-12");
-console.log("Negative probes checked: 7");
+console.log(`Schema negative probes checked: ${schemaNegativeProbeCount}`);
+console.log(`Safety negative probes checked: ${safetyNegativeProbeCount}`);

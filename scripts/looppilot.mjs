@@ -66,6 +66,7 @@ Notes:
   scan prints a read-only repository evidence summary.
   host-capabilities prints optional read-only host capability evidence.
   claude-project-summary prints optional read-only Claude project metadata only.
+  unsupported command options fail instead of being ignored.
 `);
 }
 
@@ -73,6 +74,7 @@ function parseArgs(argv) {
   const [command, ...rest] = argv;
   const options = {
     command,
+    seenOptions: [],
     target: "both",
     scope: "project",
     cwd: process.cwd(),
@@ -96,21 +98,75 @@ function parseArgs(argv) {
     return value;
   }
 
+  function recordOption(name) {
+    options.seenOptions.push(name);
+  }
+
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index];
-    if (arg === "--target") options.target = readOptionValue(arg, index++);
-    else if (arg === "--scope") options.scope = readOptionValue(arg, index++);
-    else if (arg === "--cwd") options.cwd = readOptionValue(arg, index++);
-    else if (arg === "--output") options.output = readOptionValue(arg, index++);
-    else if (arg === "--from") options.from = readOptionValue(arg, index++);
-    else if (arg === "--json") options.json = true;
-    else if (arg === "--force") options.force = true;
-    else if (arg === "--dry-run") options.dryRun = true;
-    else if (arg === "--help" || arg === "-h") options.help = true;
+    if (arg === "--target") {
+      recordOption(arg);
+      options.target = readOptionValue(arg, index++);
+    } else if (arg === "--scope") {
+      recordOption(arg);
+      options.scope = readOptionValue(arg, index++);
+    } else if (arg === "--cwd") {
+      recordOption(arg);
+      options.cwd = readOptionValue(arg, index++);
+    } else if (arg === "--output") {
+      recordOption(arg);
+      options.output = readOptionValue(arg, index++);
+    } else if (arg === "--from") {
+      recordOption(arg);
+      options.from = readOptionValue(arg, index++);
+    } else if (arg === "--json") {
+      recordOption(arg);
+      options.json = true;
+    } else if (arg === "--force") {
+      recordOption(arg);
+      options.force = true;
+    } else if (arg === "--dry-run") {
+      recordOption(arg);
+      options.dryRun = true;
+    } else if (arg === "--help" || arg === "-h") options.help = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
 
+  validateCommandOptions(options);
   return options;
+}
+
+function validateCommandOptions(options) {
+  if (!options.command || options.help) return;
+
+  const saveCommands = new Set([
+    "save-contract",
+    "save-report",
+    "save-vision",
+    "save-state",
+    "save-run-log",
+    "save-review-gate",
+  ]);
+  const saveOptions = new Set(["--from", "--cwd", "--output", "--force", "--dry-run"]);
+  const allowedOptionsByCommand = new Map([
+    ["install", new Set(["--target", "--scope", "--cwd", "--force", "--dry-run"])],
+    ["doctor", new Set(["--target", "--cwd", "--json", "--output", "--force", "--dry-run"])],
+    ["export", new Set(["--target", "--cwd", "--output", "--force", "--dry-run"])],
+    ["scan", new Set(["--cwd"])],
+    ["host-capabilities", new Set(["--cwd"])],
+    ["claude-project-summary", new Set(["--cwd"])],
+  ]);
+
+  const allowedOptions = saveCommands.has(options.command)
+    ? saveOptions
+    : allowedOptionsByCommand.get(options.command);
+  if (!allowedOptions) return;
+
+  for (const option of options.seenOptions) {
+    if (!allowedOptions.has(option)) {
+      throw new Error(`${options.command} does not support ${option}.`);
+    }
+  }
 }
 
 function filesForTarget(target) {
