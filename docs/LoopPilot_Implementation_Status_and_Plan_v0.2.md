@@ -48,10 +48,10 @@
 | Claude command alias | `.claude/commands/should-loop.md` 只引用 skill | 已完成 | command 文件明确不复制规则 | v0 完成 |
 | Chat-first 默认 | 未显式要求保存时不写 latest 文件 | 已在规则/wrapper 中要求 | core 规则与 wrapper 均说明 | v0 完成 |
 | 不做 runner/provider | MVP 不实现 runner，不接 provider | 当前符合 | 没有后台 runner / provider registry | v0 完成 |
-| Install / doctor | 技术设计未强制，但可作为分发辅助 | 已完成 | `scripts/looppilot.mjs` 支持 install/doctor | 超出 v0，正向补充 |
+| Install / doctor / scan / export / save | 技术设计未强制，但可作为分发辅助 | 已完成 | `scripts/looppilot.mjs` 支持 install、doctor、scan、export、save-contract、save-report；仍不是 runner | 超出 v0，正向补充 |
 | Repo scan helper | v0.1：只读 scan summary | 已完成 | `.looppilot/scripts/scan-summary.mjs` 与 `scripts/validate-scan-summary.mjs` | v0.1 完成 |
 | Export fallback | v0.2：生成 Codex/Claude/GitHub issue handoff | 已完成 | `.looppilot/core/export-template-*.md` 与 `looppilot export` | v0.2 完成 |
-| Latest contract/report 保存 | 仅用户明确要求时保存 | 部分完成 | `.looppilot/core/report-template.md` 已提供 report 模板；仍不默认写 latest 文件 | 显式保存策略完成 |
+| Latest contract/report 保存 | 仅用户明确要求时保存 | 已完成 | `.looppilot/core/report-template.md` 与 `save-contract` / `save-report` 已提供显式保存路径；仍不默认写 latest 文件 | 显式保存策略完成 |
 | Safety tests | 覆盖 payment/auth/deploy/secrets/unknown host 等 | 已增强 | `npm test` 覆盖 fixtures、schema、wrapper、parity、scan、export、coverage、export command、save command | 持续增强 |
 
 ---
@@ -259,13 +259,13 @@ scan helper 输出：
    - 增加 v0.1 / v0.2 pending 列表。
 2. 更新 README：
    - 增加 “Current implementation status”。
-   - 明确 `looppilot.mjs` 只有 `install` / `doctor`，不是 runner。
+   - 明确 `looppilot.mjs` 只提供安装、检查、只读扫描、显式导出与显式保存辅助，不是 runner。
 3. 将本文档作为实现状态基线，后续每个 phase 完成后更新。
 
 验收：
 
 - `npm test` 通过。
-- README 与 progress 文档不再暗示已经实现 scan/export。
+- README 与 progress 文档准确描述已实现的 scan/export/save 能力，并避免暗示存在 runner/provider。
 
 ### Phase 1：强化 schema 与安全验证（已完成，本地 runtime JSON Schema evaluator）
 
@@ -379,8 +379,9 @@ scripts/validate-scan-summary.mjs
 .looppilot/core/export-template-codex.md
 .looppilot/core/export-template-claude.md
 .looppilot/core/export-template-github-issue.md
-scripts/export-handoff.mjs
+scripts/looppilot.mjs
 scripts/validate-exports.mjs
+scripts/validate-export-command.mjs
 ```
 
 功能：
