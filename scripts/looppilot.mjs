@@ -19,6 +19,7 @@ const coreFiles = [
   ".looppilot/core/report-template.md",
   ".looppilot/fixtures/decision-fixtures.jsonl",
   ".looppilot/scripts/scan-summary.mjs",
+  ".looppilot/scripts/host-capability-summary.mjs",
 ];
 
 const codexFiles = [".agents/skills/looppilot/SKILL.md"];
