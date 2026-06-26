@@ -6,14 +6,14 @@ LoopPilot is an agent-native loop qualification pack for Codex and Claude Code. 
 
 Implemented:
 
-- Shared LoopPilot core rules, decision schema, contract template, and report/export templates.
+- Shared LoopPilot core rules, decision schema, contract template, report/export templates, and v1 manual artifact templates.
 - 45 decision fixtures: 15 `NO_GO`, 15 `PLAN_ONLY`, and 15 `RUN_WITH_CONTRACT`.
 - Codex and Claude Code wrappers that reference the same shared core.
 - Claude Code `should-loop` command alias that points to the Claude skill without duplicating rules.
-- Validation scripts for fixtures, runtime JSON Schema checks, schema drift, wrapper references, wrapper parity, scan output, scan secret-safety, export templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration.
+- Validation scripts for fixtures, runtime JSON Schema checks, schema drift, wrapper references, wrapper parity, scan output, scan secret-safety, export templates, manual artifact templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration.
 - Optional read-only repo scan helper.
 - Explicit export command for Codex, Claude Code, and GitHub issue handoffs.
-- Explicit save commands for user-requested latest contract/report files.
+- Explicit save commands for user-requested latest contract/report files and v1 manual artifacts.
 
 Not implemented by design:
 
@@ -102,10 +102,38 @@ Generated defaults:
 .looppilot/latest-report.md
 ```
 
+## v1 Manual Artifact Templates
+
+LoopPilot includes v1 manual artifact templates for project vision, current state, and run logs. These are human-authored artifacts, not background runner state files, daemon checkpoints, scheduler inputs, or automatic execution records. They are never written by default.
+
+```text
+.looppilot/core/vision-template.md
+.looppilot/core/state-template.md
+.looppilot/core/run-log-template.md
+```
+
+Save manual artifacts only when explicitly requested:
+
+```bash
+node scripts/looppilot.mjs save-vision --from /path/to/vision.md
+node scripts/looppilot.mjs save-state --from /path/to/state.md
+node scripts/looppilot.mjs save-run-log --from /path/to/run-log.md
+```
+
+Generated defaults:
+
+```text
+.looppilot/vision.md
+.looppilot/state.md
+.looppilot/run-log.md
+```
+
+All explicit save commands use duplicate protection, support `--force` to overwrite, and support `--dry-run` to preview without writing.
+
 ## Validate This Repo
 
 ```bash
 npm test
 ```
 
-This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, export templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration satisfy the current safety gates.
+This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, export templates, manual artifact templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration satisfy the current safety gates.
