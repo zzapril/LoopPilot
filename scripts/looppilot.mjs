@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -161,6 +162,56 @@ function install(options) {
   console.log(`Unchanged: ${results.unchanged}`);
 }
 
+function sha256File(filePath) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function getShortCommit(root) {
+  const result = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) return null;
+  const commit = result.stdout.trim();
+  return commit || null;
+}
+
+function buildDoctorMetadata(targetRoot, target, files, missing, fixtureSummary, durationMs) {
+  const packageInfo = readJsonFile(path.join(packageRoot, "package.json"));
+  const schema = readJsonFile(path.join(packageRoot, ".looppilot/core/decision-schema.json"));
+  const missingSet = new Set(missing);
+
+  return {
+    commit: getShortCommit(targetRoot),
+    package: {
+      name: packageInfo.name,
+      version: packageInfo.version,
+    },
+    schema: {
+      id: schema.$id,
+    },
+    target,
+    project: targetRoot,
+    timestamp: new Date().toISOString(),
+    fixture: {
+      total: fixtureSummary.total,
+      counts: fixtureSummary.counts,
+    },
+    wrapper_files: wrapperFilesByTarget[target],
+    core_files: coreFiles,
+    duration_ms: Math.round(durationMs),
+    installedFileCount: files.length - missing.length,
+    missingFileCount: missing.length,
+    files: files
+      .filter((file) => !missingSet.has(file))
+      .map((file) => ({
+        path: file,
+        sha256: sha256File(path.join(targetRoot, file)),
+      })),
+  };
+}
+
 function checkFilesExist(root, files) {
   const missing = [];
   for (const file of files) {
@@ -232,32 +283,12 @@ function saveExplicitFile(options, kind) {
   if (options.dryRun) console.log("Dry run: no file written.");
 }
 
-function getShortCommit(root) {
-  const result = spawnSync("git", ["rev-parse", "--short", "HEAD"], {
-    cwd: root,
-    encoding: "utf8",
-  });
-
-  if (result.status !== 0) return null;
-  const commit = result.stdout.trim();
-  return commit || null;
-}
-
-function getPackageMetadata() {
-  const packageJson = readJsonFile(path.join(packageRoot, "package.json"));
-  return {
-    packageName: packageJson.name ?? null,
-    packageVersion: packageJson.version ?? null,
-  };
-}
-
 function doctor(options) {
   const startedAt = process.hrtime.bigint();
   const targetRoot = path.resolve(options.cwd);
   const files = filesForTarget(options.target);
   const errors = [];
   const checks = [];
-  const { packageName, packageVersion } = getPackageMetadata();
   let fixtureSummary = { total: 0, counts: { NO_GO: 0, PLAN_ONLY: 0, RUN_WITH_CONTRACT: 0 } };
 
   function recordCheck(name, checkErrors) {
@@ -304,14 +335,7 @@ function doctor(options) {
     ok: errors.length === 0,
     target: options.target,
     project: targetRoot,
-    commit: getShortCommit(targetRoot),
-    package_name: packageName,
-    package_version: packageVersion,
-    fixture_total: fixtureSummary.total,
-    fixture_counts: fixtureSummary.counts,
-    wrapper_files: wrapperFilesByTarget[options.target],
-    core_files: coreFiles,
-    duration_ms: Math.round(durationMs),
+    metadata: buildDoctorMetadata(targetRoot, options.target, files, missing, fixtureSummary, durationMs),
     checks,
   };
 
@@ -338,6 +362,10 @@ function doctor(options) {
     console.log("LoopPilot doctor passed.");
     console.log(`Target: ${options.target}`);
     console.log(`Project: ${targetRoot}`);
+    console.log(`Package: ${report.metadata.package.name}@${report.metadata.package.version}`);
+    console.log(`Schema: ${report.metadata.schema.id}`);
+    console.log(`Installed files: ${report.metadata.installedFileCount}`);
+    console.log(`Missing files: ${report.metadata.missingFileCount}`);
     for (const check of checks) {
       console.log(`- ${check.passed ? "PASS" : "FAIL"}: ${check.name}`);
     }

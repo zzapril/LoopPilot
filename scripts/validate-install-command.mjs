@@ -5,65 +5,105 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const cli = path.resolve("scripts/looppilot.mjs");
+const packageInfo = JSON.parse(fs.readFileSync("package.json", "utf8"));
+const schemaInfo = JSON.parse(fs.readFileSync(".looppilot/core/decision-schema.json", "utf8"));
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-install-"));
 const errors = [];
-const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
-function run(args) {
-  return spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
-}
-
-const install = run(["install", "--target", "both", "--scope", "project", "--cwd", tempDir]);
-if (install.status !== 0) errors.push(`install failed: ${install.stderr || install.stdout}`);
-
-for (const file of [
+const expectedInstalledFiles = [
   ".looppilot/core/qualification-rules.md",
   ".looppilot/core/decision-schema.json",
   ".looppilot/core/contract-template.md",
+  ".looppilot/core/export-template-codex.md",
+  ".looppilot/core/export-template-claude.md",
+  ".looppilot/core/export-template-github-issue.md",
+  ".looppilot/core/report-template.md",
+  ".looppilot/core/vision-template.md",
+  ".looppilot/core/state-template.md",
+  ".looppilot/core/run-log-template.md",
   ".looppilot/fixtures/decision-fixtures.jsonl",
   ".looppilot/scripts/scan-summary.mjs",
   ".agents/skills/looppilot/SKILL.md",
   ".claude/skills/looppilot/SKILL.md",
   ".claude/commands/should-loop.md",
-]) {
+];
+
+function run(args) {
+  return spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
+}
+
+function assertDoctorMetadata(report, label) {
+  const metadata = report.metadata;
+  if (!metadata || typeof metadata !== "object") {
+    errors.push(`${label} missing metadata`);
+    return;
+  }
+
+  if (!(typeof metadata.commit === "string" || metadata.commit === null)) errors.push(`${label} metadata commit must be string or null`);
+  if (metadata.package?.name !== packageInfo.name) errors.push(`${label} metadata package name mismatch`);
+  if (metadata.package?.version !== packageInfo.version) errors.push(`${label} metadata package version mismatch`);
+  if (metadata.schema?.id !== schemaInfo.$id) errors.push(`${label} metadata schema id mismatch`);
+  if (metadata.target !== "both") errors.push(`${label} metadata target mismatch`);
+  if (metadata.project !== tempDir) errors.push(`${label} metadata project mismatch`);
+  if (typeof metadata.timestamp !== "string" || Number.isNaN(Date.parse(metadata.timestamp))) {
+    errors.push(`${label} metadata timestamp was not an ISO date`);
+  }
+  if (metadata.fixture?.total !== 45) errors.push(`${label} metadata fixture total mismatch`);
+  for (const decision of ["NO_GO", "PLAN_ONLY", "RUN_WITH_CONTRACT"]) {
+    if (metadata.fixture?.counts?.[decision] !== 15) errors.push(`${label} metadata fixture count mismatch for ${decision}`);
+  }
+  if (!Array.isArray(metadata.wrapper_files) || metadata.wrapper_files.length !== 3) {
+    errors.push(`${label} metadata wrapper_files mismatch`);
+  }
+  if (!Array.isArray(metadata.core_files) || metadata.core_files.length !== 12) {
+    errors.push(`${label} metadata core_files mismatch`);
+  }
+  if (!Number.isInteger(metadata.duration_ms) || metadata.duration_ms < 0) {
+    errors.push(`${label} metadata duration_ms must be a non-negative integer`);
+  }
+  if (metadata.installedFileCount !== expectedInstalledFiles.length) errors.push(`${label} metadata installed file count mismatch`);
+  if (metadata.missingFileCount !== 0) errors.push(`${label} metadata missing file count mismatch`);
+  if (!Array.isArray(metadata.files) || metadata.files.length !== metadata.installedFileCount) {
+    errors.push(`${label} metadata files array mismatch`);
+  } else if (metadata.files.some((file) => typeof file.path !== "string" || !/^[a-f0-9]{64}$/.test(file.sha256))) {
+    errors.push(`${label} metadata files contained invalid hashes`);
+  }
+}
+
+const install = run(["install", "--target", "both", "--scope", "project", "--cwd", tempDir]);
+if (install.status !== 0) errors.push(`install failed: ${install.stderr || install.stdout}`);
+
+for (const file of expectedInstalledFiles) {
   if (!fs.existsSync(path.join(tempDir, file))) errors.push(`installed project missing ${file}`);
 }
 
-const doctorOutput = path.join(tempDir, "doctor-report.json");
-const doctorJson = run(["doctor", "--target", "both", "--cwd", tempDir, "--json", "--output", doctorOutput]);
-if (doctorJson.status !== 0) errors.push(`doctor --json --output failed after install: ${doctorJson.stderr || doctorJson.stdout}`);
+const doctorJson = run(["doctor", "--target", "both", "--cwd", tempDir, "--json"]);
+if (doctorJson.status !== 0) errors.push(`doctor --json failed after install: ${doctorJson.stderr || doctorJson.stdout}`);
 else {
   try {
-    const report = JSON.parse(fs.readFileSync(doctorOutput, "utf8"));
-    if (!report.ok) errors.push("doctor --json --output report was not ok");
-    if (!Array.isArray(report.checks) || report.checks.length === 0) errors.push("doctor --json --output missing checks");
-
-    const requiredMetadata = [
-      "commit",
-      "package_name",
-      "package_version",
-      "fixture_total",
-      "fixture_counts",
-      "wrapper_files",
-      "core_files",
-      "duration_ms",
-    ];
-    for (const field of requiredMetadata) {
-      if (!(field in report)) errors.push(`doctor --json --output missing metadata field ${field}`);
-    }
-
-    if (!(typeof report.commit === "string" || report.commit === null)) errors.push("doctor commit must be string or null");
-    if (report.package_name !== packageJson.name) errors.push("doctor package_name did not match package.json");
-    if (report.package_version !== packageJson.version) errors.push("doctor package_version did not match package.json");
-    if (report.fixture_total !== 45) errors.push("doctor fixture_total did not include parsed fixture count");
-    for (const decision of ["NO_GO", "PLAN_ONLY", "RUN_WITH_CONTRACT"]) {
-      if (report.fixture_counts?.[decision] !== 15) errors.push(`doctor fixture_counts.${decision} did not include parsed fixture count`);
-    }
-    if (!Array.isArray(report.wrapper_files) || report.wrapper_files.length !== 3) errors.push("doctor wrapper_files did not list both target wrappers");
-    if (!Array.isArray(report.core_files) || report.core_files.length === 0) errors.push("doctor core_files was empty");
-    if (!Number.isInteger(report.duration_ms) || report.duration_ms < 0) errors.push("doctor duration_ms must be a non-negative integer");
+    const report = JSON.parse(doctorJson.stdout);
+    if (!report.ok) errors.push("doctor --json report was not ok");
+    if (!Array.isArray(report.checks) || report.checks.length === 0) errors.push("doctor --json missing checks");
+    assertDoctorMetadata(report, "doctor --json");
   } catch (error) {
-    errors.push(`doctor --json --output report was not JSON: ${error.message}`);
+    errors.push(`doctor --json output was not JSON: ${error.message}`);
+  }
+}
+
+const doctorOutputPath = "reports/doctor.json";
+const doctorJsonOutput = run(["doctor", "--target", "both", "--cwd", tempDir, "--json", "--output", doctorOutputPath]);
+if (doctorJsonOutput.status !== 0) errors.push(`doctor --json --output failed after install: ${doctorJsonOutput.stderr || doctorJsonOutput.stdout}`);
+else {
+  const absoluteDoctorOutputPath = path.join(tempDir, doctorOutputPath);
+  if (!fs.existsSync(absoluteDoctorOutputPath)) errors.push("doctor --json --output did not write output file");
+  else {
+    try {
+      const report = JSON.parse(fs.readFileSync(absoluteDoctorOutputPath, "utf8"));
+      if (!report.ok) errors.push("doctor --json --output report was not ok");
+      assertDoctorMetadata(report, "doctor --json --output");
+    } catch (error) {
+      errors.push(`doctor --json --output file was not JSON: ${error.message}`);
+    }
   }
 }
 

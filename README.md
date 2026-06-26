@@ -73,16 +73,11 @@ node scripts/looppilot.mjs doctor --target both
 
 Doctor checks installed Agent Pack files, fixtures, runtime JSON Schema compatibility, schema drift, wrapper references, and wrapper parity, then prints a per-check pass/fail report. Use `--json` for a machine-readable report, and add `--output <path>` to write that JSON to a file.
 
-The JSON report includes these metadata fields:
+The JSON report includes a `metadata` object with:
 
-- `commit`: the short Git commit for the checked project from `git rev-parse --short HEAD`, or `null` when unavailable.
-- `package_name`: the LoopPilot package name from `package.json`.
-- `package_version`: the LoopPilot package version from `package.json`.
-- `fixture_total`: the total number of parsed decision fixtures.
-- `fixture_counts`: parsed fixture counts by decision category.
-- `wrapper_files`: wrapper files expected for the selected target.
-- `core_files`: core Agent Pack files expected by doctor.
-- `duration_ms`: doctor runtime in milliseconds.
+- CLI package name/version and decision schema `$id`.
+- Target, project path, timestamp, current git commit when available, and doctor runtime.
+- Fixture totals/counts, expected wrapper/core file lists, installed/missing file counts, and SHA-256 hashes for installed pack files.
 
 ## Read-Only Repo Scan
 
