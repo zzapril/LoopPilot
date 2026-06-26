@@ -18,6 +18,9 @@ const coreFiles = [
   ".looppilot/core/export-template-claude.md",
   ".looppilot/core/export-template-github-issue.md",
   ".looppilot/core/report-template.md",
+  ".looppilot/core/vision-template.md",
+  ".looppilot/core/state-template.md",
+  ".looppilot/core/run-log-template.md",
   ".looppilot/fixtures/decision-fixtures.jsonl",
   ".looppilot/scripts/scan-summary.mjs",
 ];
@@ -43,13 +46,16 @@ Usage:
   looppilot export --target codex|claude|github-issue [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-contract --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-report --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
+  looppilot save-vision --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
+  looppilot save-state --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
+  looppilot save-run-log --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot scan [--cwd <path>]
 
 Notes:
   install copies the Agent Pack only. It does not run loops.
   doctor checks installed Agent Pack files, fixtures, and wrappers.
   export writes handoff files only when explicitly requested. It does not execute loops.
-  save-contract and save-report write latest files only when explicitly requested.
+  save-* commands write manual artifacts only when explicitly requested.
   scan prints a read-only repository evidence summary.
 `);
 }
@@ -201,7 +207,15 @@ function saveExplicitFile(options, kind) {
   const source = path.resolve(targetRoot, options.from);
   if (!fs.existsSync(source)) throw new Error(`Source file is missing: ${path.relative(targetRoot, source)}`);
 
-  const defaultOutput = kind === "contract" ? ".looppilot/latest-contract.md" : ".looppilot/latest-report.md";
+  const defaultOutputs = {
+    contract: ".looppilot/latest-contract.md",
+    report: ".looppilot/latest-report.md",
+    vision: ".looppilot/vision.md",
+    state: ".looppilot/state.md",
+    "run-log": ".looppilot/run-log.md",
+  };
+  const defaultOutput = defaultOutputs[kind];
+  if (!defaultOutput) throw new Error(`Unsupported save kind: ${kind}`);
   const outputPath = path.resolve(targetRoot, options.output ?? defaultOutput);
   if (fs.existsSync(outputPath) && !options.force) {
     throw new Error(`${path.relative(targetRoot, outputPath)} already exists. Re-run with --force to overwrite.`);
@@ -346,6 +360,12 @@ try {
     saveExplicitFile(options, "contract");
   } else if (options.command === "save-report") {
     saveExplicitFile(options, "report");
+  } else if (options.command === "save-vision") {
+    saveExplicitFile(options, "vision");
+  } else if (options.command === "save-state") {
+    saveExplicitFile(options, "state");
+  } else if (options.command === "save-run-log") {
+    saveExplicitFile(options, "run-log");
   } else if (options.command === "scan") {
     const targetRoot = path.resolve(options.cwd);
     const scriptPath = path.join(targetRoot, ".looppilot/scripts/scan-summary.mjs");

@@ -25,6 +25,7 @@
     "validate:scan-security": "node scripts/validate-scan-security.mjs",
     "validate:schema-ajv": "node scripts/validate-schema-ajv.mjs",
     "validate:cli-args": "node scripts/validate-cli-args.mjs",
+    "validate:manual-templates": "node scripts/validate-manual-templates.mjs",
     "eval:wrapper-parity": "node scripts/eval-wrapper-parity.mjs",
     "prepublishOnly": "npm test"
   },

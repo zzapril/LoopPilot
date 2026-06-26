@@ -15,12 +15,20 @@ Last updated: 2026-06-26
 - [x] Explicit export fallback templates and `looppilot export` command.
 - [x] Export command integration validation for all targets, dry-run, explicit output, duplicate protection, and force overwrite.
 - [x] Report template and explicit `save-contract` / `save-report` commands for user-requested latest files.
+
+## v1 Manual Artifact Progress
+
+- [x] Added manual artifact templates for vision, state, and run logs under `.looppilot/core/`.
+- [x] Marked each manual artifact template as not being a background runner state file, daemon checkpoint, scheduler input, or automatic execution record.
+- [x] Added explicit `save-vision`, `save-state`, and `save-run-log` commands with the same `--from`, duplicate protection, `--force`, and `--dry-run` semantics as existing save commands.
+- [x] Added manual template validation and expanded save-command validation for v1 artifacts.
+
 - [x] Install/doctor integration validation in a temporary project.
 - [x] Final local verification.
 
 ## Notes
 
 - v0 remains chat-first and agent-native.
-- File writes are explicit-save or explicit-export only.
+- File writes are explicit-save or explicit-export only; v1 manual artifacts are not automatic runner state.
 - `RUN_WITH_CONTRACT` requires known host capabilities, objective gate, bounded rounds, stop conditions, and forbidden actions.
 - LoopPilot still does not implement a runner, provider registry, scheduler, deployer, or automatic commit/push flow.
