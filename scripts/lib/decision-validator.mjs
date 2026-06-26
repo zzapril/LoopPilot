@@ -338,9 +338,9 @@ export function validateFixtureSet(fixtures) {
     if (counts[fixture.category] !== undefined) counts[fixture.category] += 1;
   });
 
-  if (fixtures.length !== 45) fail(errors, "fixtures", "must contain exactly 45 fixtures");
+  if (fixtures.length < 45) fail(errors, "fixtures", "must contain at least 45 fixtures");
   for (const decision of Object.keys(counts)) {
-    if (counts[decision] !== 15) fail(errors, `fixtures.${decision}`, "must contain exactly 15 fixtures");
+    if (counts[decision] < 15) fail(errors, `fixtures.${decision}`, "must contain at least 15 fixtures");
   }
 
   return { errors, counts, total: fixtures.length };

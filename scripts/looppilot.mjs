@@ -3,7 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readJsonFile, readJsonlFile, validateFixtureSet } from "./lib/decision-validator.mjs";
+import { validateDecisionAgainstSchema, validateDecisionSchemaDefinition } from "./lib/schema-validator.mjs";
 import { validateWrappers } from "./lib/wrapper-validator.mjs";
+import { validateWrapperParity } from "./validate-wrapper-parity.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -11,7 +13,12 @@ const coreFiles = [
   ".looppilot/core/qualification-rules.md",
   ".looppilot/core/decision-schema.json",
   ".looppilot/core/contract-template.md",
+  ".looppilot/core/export-template-codex.md",
+  ".looppilot/core/export-template-claude.md",
+  ".looppilot/core/export-template-github-issue.md",
+  ".looppilot/core/report-template.md",
   ".looppilot/fixtures/decision-fixtures.jsonl",
+  ".looppilot/scripts/scan-summary.mjs",
 ];
 
 const codexFiles = [".agents/skills/looppilot/SKILL.md"];
@@ -25,11 +32,18 @@ function printHelp() {
 
 Usage:
   looppilot install [--target both|codex|claude] [--scope project] [--cwd <path>] [--force] [--dry-run]
-  looppilot doctor [--target both|codex|claude] [--cwd <path>]
+  looppilot doctor [--target both|codex|claude] [--cwd <path>] [--json] [--output <path>] [--force] [--dry-run]
+  looppilot export --target codex|claude|github-issue [--cwd <path>] [--output <path>] [--force] [--dry-run]
+  looppilot save-contract --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
+  looppilot save-report --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
+  looppilot scan [--cwd <path>]
 
 Notes:
   install copies the Agent Pack only. It does not run loops.
-  doctor validates installed core files, fixtures, and wrappers.
+  doctor checks installed Agent Pack files, fixtures, and wrappers.
+  export writes handoff files only when explicitly requested. It does not execute loops.
+  save-contract and save-report write latest files only when explicitly requested.
+  scan prints a read-only repository evidence summary.
 `);
 }
 
@@ -42,6 +56,9 @@ function parseArgs(argv) {
     cwd: process.cwd(),
     force: false,
     dryRun: false,
+    output: null,
+    from: null,
+    json: false,
   };
 
   for (let index = 0; index < rest.length; index += 1) {
@@ -49,6 +66,9 @@ function parseArgs(argv) {
     if (arg === "--target") options.target = rest[++index];
     else if (arg === "--scope") options.scope = rest[++index];
     else if (arg === "--cwd") options.cwd = rest[++index];
+    else if (arg === "--output") options.output = rest[++index];
+    else if (arg === "--from") options.from = rest[++index];
+    else if (arg === "--json") options.json = true;
     else if (arg === "--force") options.force = true;
     else if (arg === "--dry-run") options.dryRun = true;
     else if (arg === "--help" || arg === "-h") options.help = true;
@@ -128,43 +148,141 @@ function checkFilesExist(root, files) {
   return missing;
 }
 
+function exportTemplateForTarget(target) {
+  if (target === "codex") return [".looppilot/core/export-template-codex.md", ".looppilot/exports/RUN_IN_CODEX.md"];
+  if (target === "claude") return [".looppilot/core/export-template-claude.md", ".looppilot/exports/RUN_IN_CLAUDE.md"];
+  if (target === "github-issue") return [".looppilot/core/export-template-github-issue.md", ".looppilot/exports/github-issue.md"];
+  throw new Error(`Unsupported export target: ${target}`);
+}
+
+function exportHandoff(options) {
+  if (!["codex", "claude", "github-issue"].includes(options.target)) {
+    throw new Error("Export requires --target codex, claude, or github-issue.");
+  }
+  const targetRoot = path.resolve(options.cwd);
+  const [templatePath, defaultOutputPath] = exportTemplateForTarget(options.target);
+  const source = path.join(targetRoot, templatePath);
+  if (!fs.existsSync(source)) throw new Error(`Export template is missing: ${templatePath}`);
+
+  const outputPath = path.resolve(targetRoot, options.output ?? defaultOutputPath);
+  if (fs.existsSync(outputPath) && !options.force) {
+    throw new Error(`${path.relative(targetRoot, outputPath)} already exists. Re-run with --force to overwrite.`);
+  }
+
+  if (!options.dryRun) {
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.copyFileSync(source, outputPath);
+  }
+
+  console.log("LoopPilot export completed.");
+  console.log(`Target: ${options.target}`);
+  console.log(`Output: ${path.relative(targetRoot, outputPath)}`);
+  if (options.dryRun) console.log("Dry run: no file written.");
+}
+
+function saveExplicitFile(options, kind) {
+  const targetRoot = path.resolve(options.cwd);
+  if (!options.from) throw new Error(`${kind} requires --from <path>.`);
+  const source = path.resolve(targetRoot, options.from);
+  if (!fs.existsSync(source)) throw new Error(`Source file is missing: ${path.relative(targetRoot, source)}`);
+
+  const defaultOutput = kind === "contract" ? ".looppilot/latest-contract.md" : ".looppilot/latest-report.md";
+  const outputPath = path.resolve(targetRoot, options.output ?? defaultOutput);
+  if (fs.existsSync(outputPath) && !options.force) {
+    throw new Error(`${path.relative(targetRoot, outputPath)} already exists. Re-run with --force to overwrite.`);
+  }
+
+  if (!options.dryRun) {
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.copyFileSync(source, outputPath);
+  }
+
+  console.log(`LoopPilot save-${kind} completed.`);
+  console.log(`Source: ${path.relative(targetRoot, source)}`);
+  console.log(`Output: ${path.relative(targetRoot, outputPath)}`);
+  if (options.dryRun) console.log("Dry run: no file written.");
+}
+
 function doctor(options) {
   const targetRoot = path.resolve(options.cwd);
   const files = filesForTarget(options.target);
   const errors = [];
+  const checks = [];
+
+  function recordCheck(name, checkErrors) {
+    checks.push({ name, passed: checkErrors.length === 0, errors: checkErrors });
+    errors.push(...checkErrors);
+  }
 
   const missing = checkFilesExist(targetRoot, files);
-  for (const file of missing) errors.push(`${file}: missing`);
+  recordCheck("pack files", missing.map((file) => `${file}: missing`));
 
   if (missing.length === 0) {
     try {
-      readJsonFile(path.join(targetRoot, ".looppilot/core/decision-schema.json"));
+      const schema = readJsonFile(path.join(targetRoot, ".looppilot/core/decision-schema.json"));
       const fixtures = readJsonlFile(path.join(targetRoot, ".looppilot/fixtures/decision-fixtures.jsonl"));
       const fixtureResult = validateFixtureSet(fixtures);
-      errors.push(...fixtureResult.errors);
+      recordCheck("fixtures", fixtureResult.errors);
+      recordCheck("schema definition", validateDecisionSchemaDefinition(schema));
+      const schemaDecisionErrors = [];
+      fixtures.forEach((fixture, index) => {
+        schemaDecisionErrors.push(...validateDecisionAgainstSchema(fixture.expected_decision, schema, `fixtures[${index}].expected_decision`));
+      });
+      recordCheck("fixture decision schema", schemaDecisionErrors);
     } catch (error) {
-      errors.push(error.message);
+      recordCheck("fixtures/schema read", [error.message]);
     }
 
     const wrapperResult = validateWrappers(targetRoot);
-    if (options.target === "both") errors.push(...wrapperResult.errors);
+    const parityResult = validateWrapperParity(targetRoot);
+    if (options.target === "both") {
+      recordCheck("wrappers", wrapperResult.errors);
+      recordCheck("wrapper parity", parityResult.errors);
+    }
     if (options.target === "codex") {
-      errors.push(...wrapperResult.errors.filter((error) => error.startsWith(".agents/")));
+      recordCheck("codex wrapper", wrapperResult.errors.filter((error) => error.startsWith(".agents/")));
     }
     if (options.target === "claude") {
-      errors.push(...wrapperResult.errors.filter((error) => error.startsWith(".claude/")));
+      recordCheck("claude wrapper", wrapperResult.errors.filter((error) => error.startsWith(".claude/")));
     }
   }
 
-  if (errors.length > 0) {
+  const report = {
+    ok: errors.length === 0,
+    target: options.target,
+    project: targetRoot,
+    checks,
+  };
+
+  if (options.json) {
+    const output = JSON.stringify(report, null, 2);
+    if (options.output) {
+      const outputPath = path.resolve(targetRoot, options.output);
+      if (fs.existsSync(outputPath) && !options.force) {
+        console.error(`LoopPilot error: ${path.relative(targetRoot, outputPath)} already exists. Re-run with --force to overwrite.`);
+        process.exit(1);
+      }
+      if (!options.dryRun) {
+        fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+        fs.writeFileSync(outputPath, `${output}\n`, "utf8");
+      }
+      console.log(`LoopPilot doctor JSON report ${options.dryRun ? "would be written" : "written"}.`);
+      console.log(`Output: ${path.relative(targetRoot, outputPath)}`);
+    } else if (errors.length > 0) console.error(output);
+    else console.log(output);
+  } else if (errors.length > 0) {
     console.error("LoopPilot doctor failed:");
     for (const error of errors) console.error(`- ${error}`);
-    process.exit(1);
+  } else {
+    console.log("LoopPilot doctor passed.");
+    console.log(`Target: ${options.target}`);
+    console.log(`Project: ${targetRoot}`);
+    for (const check of checks) {
+      console.log(`- ${check.passed ? "PASS" : "FAIL"}: ${check.name}`);
+    }
   }
 
-  console.log("LoopPilot doctor passed.");
-  console.log(`Target: ${options.target}`);
-  console.log(`Project: ${targetRoot}`);
+  if (errors.length > 0) process.exit(1);
 }
 
 try {
@@ -175,6 +293,19 @@ try {
     install(options);
   } else if (options.command === "doctor") {
     doctor(options);
+  } else if (options.command === "export") {
+    exportHandoff(options);
+  } else if (options.command === "save-contract") {
+    saveExplicitFile(options, "contract");
+  } else if (options.command === "save-report") {
+    saveExplicitFile(options, "report");
+  } else if (options.command === "scan") {
+    const { spawnSync } = await import("node:child_process");
+    const targetRoot = path.resolve(options.cwd);
+    const scriptPath = path.join(targetRoot, ".looppilot/scripts/scan-summary.mjs");
+    if (!fs.existsSync(scriptPath)) throw new Error("Scan helper is missing: .looppilot/scripts/scan-summary.mjs");
+    const result = spawnSync(process.execPath, [scriptPath], { cwd: targetRoot, stdio: "inherit" });
+    process.exit(result.status ?? 1);
   } else {
     throw new Error(`Unknown command: ${options.command}`);
   }
