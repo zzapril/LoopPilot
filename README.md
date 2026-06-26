@@ -6,14 +6,14 @@ LoopPilot is an agent-native loop qualification pack for Codex and Claude Code. 
 
 Implemented:
 
-- Shared LoopPilot core rules, decision schema, contract template, and report/export templates.
+- Shared LoopPilot core rules, decision schema, contract template, and report/export/review-gate templates.
 - 45 decision fixtures: 15 `NO_GO`, 15 `PLAN_ONLY`, and 15 `RUN_WITH_CONTRACT`.
 - Codex and Claude Code wrappers that reference the same shared core.
 - Claude Code `should-loop` command alias that points to the Claude skill without duplicating rules.
-- Validation scripts for fixtures, runtime JSON Schema checks, schema drift, wrapper references, wrapper parity, scan output, scan secret-safety, export templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration.
+- Validation scripts for fixtures, runtime JSON Schema checks, schema drift, wrapper references, wrapper parity, scan output, scan secret-safety, export templates, review-gate template, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration.
 - Optional read-only repo scan helper.
 - Explicit export command for Codex, Claude Code, and GitHub issue handoffs.
-- Explicit save commands for user-requested latest contract/report files.
+- Explicit save commands for user-requested latest contract/report/review-gate files.
 
 Not implemented by design:
 
@@ -93,6 +93,7 @@ Latest contract/report files are never written by default. Save them only when t
 ```bash
 node scripts/looppilot.mjs save-contract --from /path/to/contract.md
 node scripts/looppilot.mjs save-report --from /path/to/report.md
+node scripts/looppilot.mjs save-review-gate --from /path/to/review-gate.md
 ```
 
 Generated defaults:
@@ -100,7 +101,12 @@ Generated defaults:
 ```text
 .looppilot/latest-contract.md
 .looppilot/latest-report.md
+.looppilot/latest-review-gate.md
 ```
+
+## Manual Review Gates
+
+Review gates are manual evidence artifacts created for human review after a LoopPilot contract attempt. They are not automatic approval gates, deployment gates, release gates, or permission to merge, push, deploy, or publish. Use the template at `.looppilot/core/review-gate-template.md`, then save it only when explicitly requested with `save-review-gate`.
 
 ## Validate This Repo
 
@@ -108,4 +114,4 @@ Generated defaults:
 npm test
 ```
 
-This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, export templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration satisfy the current safety gates.
+This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, export templates, review-gate template, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration satisfy the current safety gates.

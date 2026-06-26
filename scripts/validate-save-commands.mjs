@@ -9,6 +9,7 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-save-"));
 const source = path.join(tempDir, "source.md");
 const reportOutput = path.join(tempDir, "latest-report.md");
 const contractOutput = path.join(tempDir, "latest-contract.md");
+const reviewGateOutput = path.join(tempDir, "latest-review-gate.md");
 const errors = [];
 fs.writeFileSync(source, "# Saved by explicit test\n", "utf8");
 
@@ -16,7 +17,7 @@ function run(args) {
   return spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
 }
 
-for (const [command, output] of [["save-report", reportOutput], ["save-contract", contractOutput]]) {
+for (const [command, output] of [["save-report", reportOutput], ["save-contract", contractOutput], ["save-review-gate", reviewGateOutput]]) {
   const result = run([command, "--from", source, "--output", output]);
   if (result.status !== 0) errors.push(`${command} failed: ${result.stderr || result.stdout}`);
   if (!fs.existsSync(output)) errors.push(`${command} did not write requested output`);

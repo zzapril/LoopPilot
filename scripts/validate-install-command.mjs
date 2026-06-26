@@ -19,6 +19,7 @@ for (const file of [
   ".looppilot/core/qualification-rules.md",
   ".looppilot/core/decision-schema.json",
   ".looppilot/core/contract-template.md",
+  ".looppilot/core/review-gate-template.md",
   ".looppilot/fixtures/decision-fixtures.jsonl",
   ".looppilot/scripts/scan-summary.mjs",
   ".agents/skills/looppilot/SKILL.md",

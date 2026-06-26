@@ -39,6 +39,14 @@ else {
   }
 }
 
+if (!fs.existsSync(".looppilot/core/review-gate-template.md")) errors.push(".looppilot/core/review-gate-template.md: missing");
+else {
+  const reviewGate = fs.readFileSync(".looppilot/core/review-gate-template.md", "utf8");
+  for (const phrase of ["Original goal", "Contract gate", "Commands run", "Pass/fail evidence", "Unresolved risks", "Human review checklist", "not an automatic approval gate", "deployment gate"]) {
+    if (!reviewGate.includes(phrase)) errors.push(`.looppilot/core/review-gate-template.md: missing ${phrase}`);
+  }
+}
+
 for (const generated of [".looppilot/exports/RUN_IN_CODEX.md", ".looppilot/exports/RUN_IN_CLAUDE.md", ".looppilot/exports/github-issue.md"]) {
   if (fs.existsSync(generated)) errors.push(`${generated}: generated export should not exist by default`);
 }

@@ -22,6 +22,7 @@
     "validate:export-command": "node scripts/validate-export-command.mjs",
     "validate:save-commands": "node scripts/validate-save-commands.mjs",
     "validate:install-command": "node scripts/validate-install-command.mjs",
+    "validate:review-gate-template": "node scripts/validate-review-gate-template.mjs",
     "validate:scan-security": "node scripts/validate-scan-security.mjs"
   }
 }

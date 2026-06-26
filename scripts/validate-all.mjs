@@ -12,6 +12,7 @@ const commands = [
   ["node", ["scripts/report-fixture-coverage.mjs"]],
   ["node", ["scripts/validate-export-command.mjs"]],
   ["node", ["scripts/validate-save-commands.mjs"]],
+  ["node", ["scripts/validate-review-gate-template.mjs"]],
   ["node", ["scripts/validate-install-command.mjs"]],
 ];
 
