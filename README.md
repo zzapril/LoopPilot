@@ -25,17 +25,19 @@ Not implemented by design:
 
 ## Install In A Project
 
-From the LoopPilot package or repository:
+During the current private/development phase, install from this repository:
+
+```bash
+node scripts/looppilot.mjs install --target both --scope project
+```
+
+After a public package is published, the intended package entrypoint is:
 
 ```bash
 npx @looppilot/cli install --target both --scope project
 ```
 
-From this repository during development:
-
-```bash
-node scripts/looppilot.mjs install --target both --scope project
-```
+Until then, do not assume the `npx @looppilot/cli` command is available outside this repository.
 
 The installer copies:
 
