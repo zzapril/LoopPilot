@@ -25,11 +25,20 @@ Not implemented by design:
 
 ## Install In A Project
 
-From the LoopPilot package or repository:
+For published package usage, run the CLI with `npx` and choose the agent target and installation scope for your project:
 
 ```bash
 npx @looppilot/cli install --target both --scope project
 ```
+
+You can also install the package globally if you prefer a reusable local command:
+
+```bash
+npm install --global @looppilot/cli
+looppilot install --target both --scope project
+```
+
+The published package name is `@looppilot/cli`. The package is intended to be publishable after release review, but it must not be published until the packaged contents have been reviewed and generated `.looppilot/exports/` files or `.looppilot/latest-*` files are confirmed absent.
 
 From this repository during development:
 

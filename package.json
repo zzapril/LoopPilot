@@ -1,7 +1,7 @@
 {
   "name": "@looppilot/cli",
   "version": "0.0.0",
-  "private": true,
+  "private": false,
   "type": "module",
   "description": "Agent-native loop qualification pack for Codex and Claude Code.",
   "bin": {
@@ -22,6 +22,26 @@
     "validate:export-command": "node scripts/validate-export-command.mjs",
     "validate:save-commands": "node scripts/validate-save-commands.mjs",
     "validate:install-command": "node scripts/validate-install-command.mjs",
-    "validate:scan-security": "node scripts/validate-scan-security.mjs"
+    "validate:scan-security": "node scripts/validate-scan-security.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/looppilot/looppilot.git"
+  },
+  "files": [
+    ".agents/skills/looppilot/SKILL.md",
+    ".claude/commands/should-loop.md",
+    ".claude/skills/looppilot/SKILL.md",
+    ".looppilot/core/",
+    ".looppilot/fixtures/",
+    ".looppilot/scripts/scan-summary.mjs",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }
