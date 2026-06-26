@@ -4,13 +4,15 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const root = process.cwd();
+const maxDepth = 6;
+const maxEntries = 5000;
 const sensitivePatterns = [
-  /^\.env(?:\..*)?$/,
-  /\.pem$/,
-  /\.key$/,
-  /^secrets\//,
-  /^\.ssh\//,
-  /^\.aws\//,
+  /(^|\/)\.env(?:\..*)?$/,
+  /(^|\/)[^/]+\.pem$/,
+  /(^|\/)[^/]+\.key$/,
+  /(^|\/)secrets(\/|$)/,
+  /(^|\/)\.ssh(\/|$)/,
+  /(^|\/)\.aws(\/|$)/,
 ];
 const riskPathPattern = /(^|\/)(auth|payment|billing|checkout|permission|admin|production|deploy|infra|migration|db|database|secret|secrets)(\/|$)/i;
 
@@ -24,31 +26,61 @@ function fileExists(name) {
   return fs.existsSync(path.join(root, name));
 }
 
-function readJson(name) {
-  try {
-    return JSON.parse(fs.readFileSync(path.join(root, name), "utf8"));
-  } catch {
-    return null;
-  }
-}
-
 function isSensitive(relativePath) {
   const normalized = relativePath.replaceAll(path.sep, "/");
   return sensitivePatterns.some((pattern) => pattern.test(normalized));
 }
 
-function rootFileNames() {
-  return fs.readdirSync(root, { withFileTypes: true })
-    .filter((entry) => !entry.name.startsWith(".git"))
-    .map((entry) => entry.name);
+function shouldSkipDirectory(relativePath) {
+  const normalized = relativePath.replaceAll(path.sep, "/");
+  return normalized === ".git" || normalized === "node_modules" || normalized.endsWith("/node_modules");
 }
 
-function safeRootFiles() {
-  return rootFileNames().filter((name) => !isSensitive(name));
+function walkPathCandidates() {
+  const found = [];
+  const pending = [{ absolutePath: root, relativePath: "", depth: 0 }];
+  let visitedEntries = 0;
+
+  while (pending.length > 0 && visitedEntries < maxEntries) {
+    const current = pending.shift();
+    let entries;
+    try {
+      entries = fs.readdirSync(current.absolutePath, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (visitedEntries >= maxEntries) break;
+      const relativePath = current.relativePath ? path.join(current.relativePath, entry.name) : entry.name;
+      if (shouldSkipDirectory(relativePath)) continue;
+
+      found.push(relativePath);
+      visitedEntries += 1;
+
+      if (entry.isDirectory() && current.depth < maxDepth) {
+        pending.push({
+          absolutePath: path.join(current.absolutePath, entry.name),
+          relativePath,
+          depth: current.depth + 1,
+        });
+      }
+    }
+  }
+
+  return found;
 }
 
-function sensitiveRootFiles() {
-  return rootFileNames().filter(isSensitive);
+function rootFileNames(pathCandidates) {
+  return pathCandidates.filter((name) => !name.includes(path.sep) && !name.includes("/"));
+}
+
+function safeRootFiles(pathCandidates) {
+  return rootFileNames(pathCandidates).filter((name) => !isSensitive(name));
+}
+
+function sensitivePathCandidates(pathCandidates) {
+  return pathCandidates.filter(isSensitive);
 }
 
 function changedFilesFromStatus(status) {
@@ -62,9 +94,7 @@ function changedFilesFromStatus(status) {
 function candidateCommands() {
   const tests = [];
   const builds = [];
-  const pkg = readJson("package.json");
-  if (pkg?.scripts?.test) tests.push("npm test");
-  if (pkg?.scripts?.build) builds.push("npm run build");
+  if (fileExists("package.json")) tests.push("npm test");
   if (fileExists("pyproject.toml")) tests.push("pytest");
   if (fileExists("go.mod")) {
     tests.push("go test ./...");
@@ -86,13 +116,12 @@ function languages(files) {
 const status = run("git", ["status", "--short"]);
 const diffStat = run("git", ["diff", "--stat"]);
 const changedFiles = changedFilesFromStatus(status);
-const rootFiles = safeRootFiles();
-const sensitiveFiles = sensitiveRootFiles();
+const pathCandidates = walkPathCandidates();
+const rootFiles = safeRootFiles(pathCandidates);
+const sensitiveFiles = sensitivePathCandidates(pathCandidates);
 const commands = candidateCommands();
 const allPathCandidates = [...changedFiles, ...rootFiles];
-const readmeTitle = fileExists("README.md")
-  ? fs.readFileSync(path.join(root, "README.md"), "utf8").split(/\n/).find((line) => line.startsWith("# ")) ?? null
-  : null;
+const readmeTitle = fileExists("README.md") ? "README.md" : null;
 
 const summary = {
   repo: {
