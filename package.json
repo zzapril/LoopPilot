@@ -48,6 +48,8 @@
     ".looppilot/fixtures/",
     ".looppilot/scripts/",
     "scripts/",
+    "docs/",
+    "IMPLEMENTATION_PROGRESS.md",
     "README.md",
     "LICENSE"
   ],

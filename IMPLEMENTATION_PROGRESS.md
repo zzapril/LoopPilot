@@ -1,6 +1,6 @@
 # LoopPilot Implementation Progress
 
-Last updated: 2026-06-26
+Last updated: 2026-06-27
 
 ## Feature Progress
 
@@ -8,23 +8,29 @@ Last updated: 2026-06-26
 - [x] Fixture validator and verification scripts.
 - [x] Codex and Claude Code wrappers.
 - [x] Install and enhanced doctor commands with per-check pass/fail output.
-- [x] Runtime JSON Schema and schema drift validation for fixture decisions and schema enums.
+- [x] Runtime JSON Schema, Ajv cross-check, and schema drift validation for fixture decisions and schema enums.
 - [x] Wrapper parity validation for Codex and Claude Code guardrails/workflow.
 - [x] Fixture coverage report for decision distribution, high-risk keyword coverage, and taxonomy coverage.
 - [x] Optional read-only repo scan helper with sensitive path reporting and no secret content reads.
+- [x] Optional read-only host capability and Claude project summary helpers.
 - [x] Explicit export fallback templates and `looppilot export` command.
 - [x] Export command integration validation for all targets, dry-run, explicit output, duplicate protection, and force overwrite.
-- [x] Report template and explicit `save-contract` / `save-report` commands for user-requested latest files.
+- [x] Report and review-gate templates plus explicit `save-contract`, `save-report`, and `save-review-gate` commands for user-requested latest files.
+- [x] Package contents and docs consistency validation.
+- [x] CLI argument validation including top-level help.
 
 ## v1 Manual Artifact Progress
 
 - [x] Added manual artifact templates for vision, state, and run logs under `.looppilot/core/`.
 - [x] Marked each manual artifact template as not being a background runner state file, daemon checkpoint, scheduler input, or automatic execution record.
-- [x] Added explicit `save-vision`, `save-state`, and `save-run-log` commands with the same `--from`, duplicate protection, `--force`, and `--dry-run` semantics as existing save commands.
+- [x] Added explicit `save-vision`, `save-state`, and `save-run-log` commands with uppercase defaults: `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md`.
+- [x] Kept `save-review-gate` default at `.looppilot/latest-review-gate.md`.
+- [x] All `save-*` commands require `--from`, use duplicate protection by default, support `--force`, and support `--dry-run`.
 - [x] Added manual template validation and expanded save-command validation for v1 artifacts.
 
 - [x] Install/doctor integration validation in a temporary project.
-- [x] Final local verification.
+- [x] `0.1.0` release-ready metadata and release notes.
+- [x] Final local verification; `npm publish` still requires explicit human approval.
 
 ## Notes
 

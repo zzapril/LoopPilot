@@ -73,6 +73,23 @@ function assertDoctorMetadata(report, label) {
   }
 }
 
+function assertDoctorCommand(target) {
+  const doctor = run(["doctor", "--target", target, "--cwd", tempDir, "--json"]);
+  if (doctor.status !== 0) {
+    errors.push(`doctor --target ${target} --json failed after install: ${doctor.stderr || doctor.stdout}`);
+    return null;
+  }
+
+  try {
+    const report = JSON.parse(doctor.stdout);
+    if (!report.ok) errors.push(`doctor --target ${target} --json report was not ok`);
+    return report;
+  } catch (error) {
+    errors.push(`doctor --target ${target} --json output was not JSON: ${error.message}`);
+    return null;
+  }
+}
+
 const install = run(["install", "--target", "both", "--scope", "project", "--cwd", tempDir]);
 if (install.status !== 0) errors.push(`install failed: ${install.stderr || install.stdout}`);
 
@@ -80,17 +97,15 @@ for (const file of expectedInstalledFiles) {
   if (!fs.existsSync(path.join(tempDir, file))) errors.push(`installed project missing ${file}`);
 }
 
-const doctorJson = run(["doctor", "--target", "both", "--cwd", tempDir, "--json"]);
-if (doctorJson.status !== 0) errors.push(`doctor --json failed after install: ${doctorJson.stderr || doctorJson.stdout}`);
-else {
-  try {
-    const report = JSON.parse(doctorJson.stdout);
-    if (!report.ok) errors.push("doctor --json report was not ok");
-    if (!Array.isArray(report.checks) || report.checks.length === 0) errors.push("doctor --json missing checks");
-    assertDoctorMetadata(report, "doctor --json");
-  } catch (error) {
-    errors.push(`doctor --json output was not JSON: ${error.message}`);
-  }
+const doctorJsonReport = assertDoctorCommand("both");
+if (doctorJsonReport) {
+  if (!Array.isArray(doctorJsonReport.checks) || doctorJsonReport.checks.length === 0) errors.push("doctor --json missing checks");
+  assertDoctorMetadata(doctorJsonReport, "doctor --json");
+}
+
+for (const target of ["codex", "claude"]) {
+  const report = assertDoctorCommand(target);
+  if (report?.target !== target) errors.push(`doctor --target ${target} report target mismatch`);
 }
 
 const doctorOutputPath = "reports/doctor.json";

@@ -6,6 +6,8 @@ LoopPilot is an agent-native loop qualification pack for Codex and Claude Code. 
 
 For short, task-oriented setup and usage, see [LoopPilot Quickstart](docs/LoopPilot_Quickstart.md).
 
+For product, technical, release, and v2 planning docs in reading order, see [LoopPilot Docs](docs/README.md).
+
 ## Current Implementation Status
 
 The implementation status document is kept as an internal/audit record: [LoopPilot Implementation Status and Plan v0.2](docs/LoopPilot_Implementation_Status_and_Plan_v0.2.md).
@@ -32,13 +34,19 @@ Not implemented by design:
 
 ## Install In A Project
 
-For published package usage, run the CLI with `npx` and choose the agent target and installation scope for your project:
+Until the package is published, install from this repository during development:
+
+```bash
+node scripts/looppilot.mjs install --target both --scope project
+```
+
+After human approval and npm publish, run the CLI with `npx` and choose the agent target and installation scope for your project:
 
 ```bash
 npx @looppilot/cli install --target both --scope project
 ```
 
-You can also install the package globally if you prefer a reusable local command:
+After publish, you can also install the package globally if you prefer a reusable local command:
 
 ```bash
 npm install --global @looppilot/cli
@@ -46,12 +54,6 @@ looppilot install --target both --scope project
 ```
 
 The published package name is `@looppilot/cli` and the first release-ready version is `0.1.0`. The package is intended to be publishable after release review, but it must not be published until the packaged contents have been reviewed and generated `.looppilot/exports/`, `.looppilot/latest-*`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md` files are confirmed absent.
-
-From this repository during development:
-
-```bash
-node scripts/looppilot.mjs install --target both --scope project
-```
 
 The installer copies:
 
@@ -185,7 +187,7 @@ All explicit save commands use duplicate protection, support `--force` to overwr
 npm test
 ```
 
-This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, host capability helper shape and secret-safety, Claude project summary secret-safety, export templates, manual artifact templates, review-gate template, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration satisfy the current safety gates.
+This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, Ajv cross-checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, host capability helper shape and secret-safety, Claude project summary secret-safety, export templates, manual artifact templates, review-gate template, fixture coverage taxonomy, export command behavior, explicit save commands, package contents, docs consistency, CLI argument handling, and install/doctor integration satisfy the current safety gates.
 
 ## Optional Wrapper Output Parity Eval
 

@@ -4,16 +4,16 @@ Short, task-oriented setup for using LoopPilot as an agent-native loop qualifica
 
 ## 1. Install
 
-From a project where you want the Agent Pack installed, the release-ready package interface is:
-
-```bash
-npx @looppilot/cli install --target both --scope project
-```
-
-The package is release-ready at `0.1.0`, but `npm publish` is intentionally not part of this step. During local development from this repository, run:
+Until the package is published, install from this repository during development:
 
 ```bash
 node scripts/looppilot.mjs install --target both --scope project
+```
+
+The package is release-ready at `0.1.0`, but `npm publish` is intentionally not part of this step. After human approval and publish, the package interface is:
+
+```bash
+npx @looppilot/cli install --target both --scope project
 ```
 
 ## 2. Run Doctor

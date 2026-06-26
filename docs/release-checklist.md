@@ -9,13 +9,14 @@ Current status: `0.1.0` is prepared for local release review. `npm publish` has 
 - [ ] Confirm the package should be published publicly as `@looppilot/cli`.
 - [x] Confirm `package.json` has `"private": false`, `"license": "MIT"`, repository metadata, and public scoped-package publish config.
 - [x] Confirm `package.json` version is `0.1.0`.
-- [x] Confirm the `files` whitelist contains only source, wrapper, core, fixture, script, README, and license files needed by users.
+- [x] Confirm the `files` whitelist contains only source, wrapper, core, fixture, script, docs, README, and license files needed by users.
 - [x] Confirm no secrets, credentials, local-only files, generated handoff exports, latest files, or generated v1 artifacts are intended for the package.
 - [x] Confirm the README install instructions match the package name and CLI behavior.
 
 ## Validation
 
 - [x] Run `npm test` and confirm it exits successfully.
+- [x] Confirm `npm test` includes packed CLI runtime smoke checks for help, doctor, install dry-run, and local tarball bin install.
 - [x] Run `npm run eval:wrapper-parity` and confirm golden wrapper output parity passes.
 - [x] Run `node scripts/looppilot.mjs doctor --target both --json` and confirm metadata includes core files, installed file counts, and hashes.
 - [x] Run `env npm_config_cache=/private/tmp/looppilot-npm-cache npm pack --dry-run` and review the listed files.
@@ -23,6 +24,7 @@ Current status: `0.1.0` is prepared for local release review. `npm publish` has 
 - [x] Confirm `.looppilot/latest-contract.md`, `.looppilot/latest-report.md`, and `.looppilot/latest-review-gate.md` are not present in the package contents.
 - [x] Confirm generated `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md` are not present in the package contents.
 - [x] Confirm uppercase v1 templates and helper scripts are present in the package contents.
+- [x] Confirm release docs are present so README links and docs consistency validation remain self-contained.
 - [x] Run `git diff --check` and confirm no whitespace errors.
 
 ## Publish Hold

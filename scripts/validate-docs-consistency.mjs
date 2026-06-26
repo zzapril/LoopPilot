@@ -18,7 +18,7 @@ const discoveredDocs = fs.existsSync("docs")
     .map((file) => path.join("docs", file))
   : [];
 
-const filesToScan = [...new Set(["README.md", ...requiredDocs, ...discoveredDocs])].sort();
+const filesToScan = [...new Set(["README.md", "IMPLEMENTATION_PROGRESS.md", ...requiredDocs, ...discoveredDocs])].sort();
 
 const forbiddenFragments = [
   ".looppilot/vision.md",
@@ -28,6 +28,7 @@ const forbiddenFragments = [
   "looppilot check \"",
   "Latest contract/report files are never written by default",
   "latest contract/report files",
+  "默认仍不写 `.looppilot/latest-contract.md` 或 `.looppilot/latest-report.md`",
   "未引入外部 Ajv",
   "返回 403",
   "静态 parity",
@@ -41,6 +42,14 @@ const requiredFragmentsByFile = {
     ".looppilot/VISION.md",
     ".looppilot/STATE.md",
     ".looppilot/RUN_LOG.md",
+  ],
+  "IMPLEMENTATION_PROGRESS.md": [
+    "0.1.0",
+    ".looppilot/latest-review-gate.md",
+    ".looppilot/VISION.md",
+    ".looppilot/STATE.md",
+    ".looppilot/RUN_LOG.md",
+    "npm publish",
   ],
   "docs/LoopPilot_PRD_v0.2.md": [
     ".looppilot/latest-review-gate.md",

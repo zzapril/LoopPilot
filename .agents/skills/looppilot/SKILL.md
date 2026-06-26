@@ -45,7 +45,7 @@ If any capability is unavailable or uncertain, set `capability_confidence` to `u
 7. For `RUN_WITH_CONTRACT`, render the contract using `.looppilot/core/contract-template.md`.
 8. Ask for confirmation unless the user already explicitly confirmed.
 9. Execute in the current Codex session only within the contract.
-10. Do not write `.looppilot/latest-contract.md`, `.looppilot/latest-report.md`, or export files unless the user explicitly asks to save or export.
+10. Do not write `.looppilot/latest-contract.md`, `.looppilot/latest-report.md`, `.looppilot/latest-review-gate.md`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, `.looppilot/RUN_LOG.md`, or export files unless the user explicitly asks to save or export.
 
 ## Decision Guardrails
 

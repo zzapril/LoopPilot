@@ -97,4 +97,4 @@ Forbidden actions must include at least:
 
 ## File Policy
 
-Default behavior is chat-first. Do not write `.looppilot/latest-contract.md`, `.looppilot/latest-report.md`, or export files unless the user explicitly asks to save or export.
+Default behavior is chat-first. Do not write `.looppilot/latest-contract.md`, `.looppilot/latest-report.md`, `.looppilot/latest-review-gate.md`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, `.looppilot/RUN_LOG.md`, or export files unless the user explicitly asks to save or export.

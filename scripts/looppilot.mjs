@@ -233,6 +233,12 @@ function checkFilesExist(root, files) {
   return missing;
 }
 
+function wrapperErrorsForTarget(errors, target) {
+  if (target === "both") return errors;
+  const wrapperPrefix = target === "codex" ? ".agents/" : ".claude/";
+  return errors.filter((error) => error.startsWith(wrapperPrefix) || error.startsWith(".looppilot/core/"));
+}
+
 function exportTemplateForTarget(target) {
   if (target === "codex") return [".looppilot/core/export-template-codex.md", ".looppilot/exports/RUN_IN_CODEX.md"];
   if (target === "claude") return [".looppilot/core/export-template-claude.md", ".looppilot/exports/RUN_IN_CLAUDE.md"];
@@ -337,10 +343,10 @@ function doctor(options) {
       recordCheck("wrapper parity", parityResult.errors);
     }
     if (options.target === "codex") {
-      recordCheck("codex wrapper", wrapperResult.errors.filter((error) => error.startsWith(".agents/")));
+      recordCheck("codex wrapper", wrapperErrorsForTarget(wrapperResult.errors, "codex"));
     }
     if (options.target === "claude") {
-      recordCheck("claude wrapper", wrapperResult.errors.filter((error) => error.startsWith(".claude/")));
+      recordCheck("claude wrapper", wrapperErrorsForTarget(wrapperResult.errors, "claude"));
     }
   }
 

@@ -169,7 +169,7 @@ scripts/looppilot.mjs
 - `validate-save-commands.mjs` 检查 `save-contract` / `save-report` / `save-review-gate` / `save-vision` / `save-state` / `save-run-log` 必须显式 `--from`，默认路径正确，duplicate 需 `--force`，`--dry-run` 不写文件。
 - `validate-manual-templates.mjs` 检查 v1 `VISION.md`、`STATE.md`、`RUN_LOG.md` 模板包含 schema/version/scope/gate/review/next-step 等必需字段。
 - `validate-review-gate-template.mjs` 检查 review-gate 模板仍是显式 evidence artifact，不是 approval/deploy/release gate。
-- `validate-package-contents.mjs` 检查 package dry-run contents 包含 core/templates/helpers，且不包含 `docs/`、`.looppilot/exports/`、`.looppilot/latest-*` 或生成的 v1 artifacts。
+- `validate-package-contents.mjs` 检查 packed package contents 包含 core/templates/helpers/docs/progress notes，且不包含 `.looppilot/exports/`、`.looppilot/latest-*` 或生成的 v1 artifacts；随后解包并 smoke test `looppilot --help`、`doctor --json`、`install --dry-run`，再本地安装 tarball 并验证 `looppilot --help` bin shim。
 - `validate-docs-consistency.mjs` 检查 README 与全部 `docs/*.md` 不回退到旧小写 artifact、旧 Ajv/parity 说法或未实现的 `looppilot check` 示例。
 - `validate-install-command.mjs` 在临时项目中验证 install 后 doctor --json 可通过。
 - `looppilot.mjs` 支持 `install`、增强 `doctor`、`scan`、`host-capabilities`、`claude-project-summary`、显式 `export` 和显式 `save-*`。
@@ -260,7 +260,7 @@ scan helper 输出：
 安全边界：
 
 - report template 只用于 chat report 或用户明确要求保存的 report。
-- 默认仍不写 `.looppilot/latest-contract.md` 或 `.looppilot/latest-report.md`。
+- Agent Pack 默认只在聊天中输出 contract/report/review 信息；`.looppilot/latest-contract.md`、`.looppilot/latest-report.md`、`.looppilot/latest-review-gate.md`、`.looppilot/VISION.md`、`.looppilot/STATE.md` 和 `.looppilot/RUN_LOG.md` 只能由用户明确请求或 save 命令写入。
 
 ---
 
@@ -529,7 +529,7 @@ node scripts/looppilot.mjs install --target both --scope project --dry-run
 - [x] `save-run-log` 默认写 `.looppilot/RUN_LOG.md`。
 - [x] `save-review-gate` 默认继续写 `.looppilot/latest-review-gate.md`。
 - [x] 所有 `save-*` 命令要求显式 `--from`，默认 duplicate protection，`--force` 覆盖，`--dry-run` 不写文件。
-- [x] package contents validator 确认 package 包含 core/templates/helpers，且不包含 generated exports、latest files 或生成的 v1 artifacts。
+- [x] package contents validator 确认 package 包含 core/templates/helpers/docs/progress notes，且不包含 generated exports、latest files 或生成的 v1 artifacts；packed CLI runtime 和本地安装 bin smoke test 通过。
 - [x] docs consistency validator 确认 README 与全部 `docs/*.md` 和 uppercase artifact、review gate、release-ready CLI surface 保持一致。
 
 ---
@@ -555,7 +555,7 @@ npm test:
 - Schema validation passed.
 - Ajv schema validation passed for 45 fixtures and 7 negative probes.
 - Fixture distribution: 15 NO_GO, 15 PLAN_ONLY, 15 RUN_WITH_CONTRACT.
-- Wrapper, wrapper parity, scan, scan security, Claude project summary, host capability summary, export, fixture coverage, save command, manual template, review-gate template, package contents, docs consistency, install, and CLI argument validation passed.
+- Wrapper, wrapper parity, scan, scan security, Claude project summary, host capability summary, export, fixture coverage, save command, manual template, review-gate template, package contents/runtime smoke, docs consistency, install, and CLI argument validation passed.
 
 eval:wrapper-parity:
 - Golden wrapper output parity passed for 4 fixtures.
@@ -569,8 +569,8 @@ doctor --target both --json:
 
 npm pack --dry-run:
 - Package version: 0.1.0
-- total files: 46
-- includes uppercase v1 templates and helper scripts.
+- total files: 57
+- includes uppercase v1 templates, helper scripts, and docs/progress notes.
 - excludes generated `.looppilot/exports/`, `.looppilot/latest-*`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md`.
 
 git diff --check:

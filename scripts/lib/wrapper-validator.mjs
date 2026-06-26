@@ -7,6 +7,15 @@ const requiredCoreRefs = [
   ".looppilot/core/contract-template.md",
 ];
 
+const requiredFilePolicyRefs = [
+  ".looppilot/latest-contract.md",
+  ".looppilot/latest-report.md",
+  ".looppilot/latest-review-gate.md",
+  ".looppilot/VISION.md",
+  ".looppilot/STATE.md",
+  ".looppilot/RUN_LOG.md",
+];
+
 const wrapperSpecs = [
   {
     path: ".agents/skills/looppilot/SKILL.md",
@@ -50,6 +59,21 @@ export function validateWrappers(root = process.cwd()) {
 
     if (!text.includes("JSON decision") || !text.includes("decision-schema.json")) {
       errors.push(`${wrapper.path}: must require schema-valid JSON first`);
+    }
+
+    for (const ref of requiredFilePolicyRefs) {
+      if (!text.includes(ref)) {
+        errors.push(`${wrapper.path}: missing explicit file policy reference ${ref}`);
+      }
+    }
+  }
+
+  const coreRulesText = readIfExists(root, ".looppilot/core/qualification-rules.md", errors);
+  if (coreRulesText) {
+    for (const ref of requiredFilePolicyRefs) {
+      if (!coreRulesText.includes(ref)) {
+        errors.push(`.looppilot/core/qualification-rules.md: missing explicit file policy reference ${ref}`);
+      }
     }
   }
 

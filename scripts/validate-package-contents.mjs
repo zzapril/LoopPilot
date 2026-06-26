@@ -5,9 +5,11 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-npm-cache-"));
+const packDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-pack-"));
+const installDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-pack-install-"));
 const errors = [];
 
-const result = spawnSync("npm", ["pack", "--dry-run", "--json"], {
+const result = spawnSync("npm", ["pack", "--json", "--pack-destination", packDir], {
   encoding: "utf8",
   env: {
     ...process.env,
@@ -16,10 +18,11 @@ const result = spawnSync("npm", ["pack", "--dry-run", "--json"], {
 });
 
 if (result.status !== 0) {
-  errors.push(`npm pack --dry-run --json failed: ${result.stderr || result.stdout}`);
+  errors.push(`npm pack --json failed: ${result.stderr || result.stdout}`);
 } else {
   try {
     const parsed = JSON.parse(result.stdout);
+    const packedFileName = parsed[0]?.filename;
     const files = new Set((parsed[0]?.files ?? []).map((file) => file.path));
     const requiredFiles = [
       ".looppilot/core/qualification-rules.md",
@@ -47,6 +50,14 @@ if (result.status !== 0) {
       "scripts/lib/decision-validator.mjs",
       "scripts/lib/schema-validator.mjs",
       "scripts/lib/wrapper-validator.mjs",
+      "docs/README.md",
+      "docs/LoopPilot_Quickstart.md",
+      "docs/LoopPilot_PRD_v0.2.md",
+      "docs/LoopPilot_Technical_Design_v0.2.md",
+      "docs/LoopPilot_Reusable_Artifacts_v1.md",
+      "docs/release-checklist.md",
+      "docs/release-notes-0.1.0.md",
+      "IMPLEMENTATION_PROGRESS.md",
       "README.md",
       "LICENSE",
       "package.json",
@@ -54,7 +65,6 @@ if (result.status !== 0) {
     const forbiddenPrefixes = [
       ".looppilot/exports/",
       ".looppilot/latest-",
-      "docs/",
     ];
     const forbiddenFiles = [
       ".looppilot/latest-contract.md",
@@ -74,12 +84,73 @@ if (result.status !== 0) {
         errors.push(`package contents included forbidden path ${file}`);
       }
     }
+
+    if (!packedFileName) {
+      errors.push("npm pack did not report a tarball filename");
+    } else {
+      const tarballPath = path.join(packDir, packedFileName);
+      const npmInstall = spawnSync("npm", ["install", tarballPath, "--ignore-scripts"], {
+        cwd: installDir,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          npm_config_cache: cacheDir,
+        },
+      });
+      if (npmInstall.status !== 0) {
+        errors.push(`packed package local install failed: ${npmInstall.stderr || npmInstall.stdout}`);
+      } else {
+        const installedPackageDir = path.join(installDir, "node_modules", "@looppilot", "cli");
+        const binName = process.platform === "win32" ? "looppilot.cmd" : "looppilot";
+        const binPath = path.join(installDir, "node_modules", ".bin", binName);
+        const installedHelp = spawnSync(binPath, ["--help"], {
+          cwd: installDir,
+          encoding: "utf8",
+        });
+        if (installedHelp.status !== 0 || !installedHelp.stdout.includes("Usage:")) {
+          errors.push(`installed package bin help failed: ${installedHelp.stderr || installedHelp.stdout}`);
+        }
+
+        const scriptHelp = spawnSync(process.execPath, ["scripts/looppilot.mjs", "--help"], {
+          cwd: installedPackageDir,
+          encoding: "utf8",
+        });
+        if (scriptHelp.status !== 0 || !scriptHelp.stdout.includes("Usage:")) {
+          errors.push(`installed package CLI help failed: ${scriptHelp.stderr || scriptHelp.stdout}`);
+        }
+
+        const doctor = spawnSync(process.execPath, ["scripts/looppilot.mjs", "doctor", "--target", "both", "--json"], {
+          cwd: installedPackageDir,
+          encoding: "utf8",
+        });
+        if (doctor.status !== 0) {
+          errors.push(`installed package CLI doctor failed: ${doctor.stderr || doctor.stdout}`);
+        } else {
+          try {
+            const report = JSON.parse(doctor.stdout);
+            if (!report.ok) errors.push("installed package CLI doctor report was not ok");
+          } catch (error) {
+            errors.push(`installed package CLI doctor output was not JSON: ${error.message}`);
+          }
+        }
+
+        const install = spawnSync(process.execPath, ["scripts/looppilot.mjs", "install", "--target", "both", "--scope", "project", "--dry-run"], {
+          cwd: installedPackageDir,
+          encoding: "utf8",
+        });
+        if (install.status !== 0 || !install.stdout.includes("LoopPilot install completed.")) {
+          errors.push(`installed package CLI install dry-run failed: ${install.stderr || install.stdout}`);
+        }
+      }
+    }
   } catch (error) {
-    errors.push(`npm pack --dry-run --json output was not JSON: ${error.message}`);
+    errors.push(`npm pack --json output was not JSON: ${error.message}`);
   }
 }
 
 fs.rmSync(cacheDir, { recursive: true, force: true });
+fs.rmSync(packDir, { recursive: true, force: true });
+fs.rmSync(installDir, { recursive: true, force: true });
 
 if (errors.length > 0) {
   console.error("LoopPilot package contents validation failed:");
