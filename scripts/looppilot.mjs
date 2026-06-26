@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,7 +33,7 @@ function printHelp() {
 
 Usage:
   looppilot install [--target both|codex|claude] [--scope project] [--cwd <path>] [--force] [--dry-run]
-  looppilot doctor [--target both|codex|claude] [--cwd <path>] [--json]
+  looppilot doctor [--target both|codex|claude] [--cwd <path>] [--json] [--output <path>]
   looppilot export --target codex|claude|github-issue [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-contract --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-report --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
@@ -138,6 +139,37 @@ function install(options) {
   if (options.dryRun) console.log(`Would write: ${results.wouldWrite}`);
   else console.log(`Written: ${results.written}`);
   console.log(`Unchanged: ${results.unchanged}`);
+}
+
+function sha256File(filePath) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function buildDoctorMetadata(targetRoot, target, files, missing) {
+  const packageInfo = readJsonFile(path.join(packageRoot, "package.json"));
+  const schema = readJsonFile(path.join(packageRoot, ".looppilot/core/decision-schema.json"));
+  const missingSet = new Set(missing);
+
+  return {
+    package: {
+      name: packageInfo.name,
+      version: packageInfo.version,
+    },
+    schema: {
+      id: schema.$id,
+    },
+    target,
+    project: targetRoot,
+    timestamp: new Date().toISOString(),
+    installedFileCount: files.length - missing.length,
+    missingFileCount: missing.length,
+    files: files
+      .filter((file) => !missingSet.has(file))
+      .map((file) => ({
+        path: file,
+        sha256: sha256File(path.join(targetRoot, file)),
+      })),
+  };
 }
 
 function checkFilesExist(root, files) {
@@ -251,11 +283,17 @@ function doctor(options) {
     ok: errors.length === 0,
     target: options.target,
     project: targetRoot,
+    metadata: buildDoctorMetadata(targetRoot, options.target, files, missing),
     checks,
   };
 
   if (options.json) {
     const output = JSON.stringify(report, null, 2);
+    if (options.output) {
+      const outputPath = path.resolve(targetRoot, options.output);
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+      fs.writeFileSync(outputPath, `${output}\n`);
+    }
     if (errors.length > 0) console.error(output);
     else console.log(output);
   } else if (errors.length > 0) {
@@ -265,6 +303,10 @@ function doctor(options) {
     console.log("LoopPilot doctor passed.");
     console.log(`Target: ${options.target}`);
     console.log(`Project: ${targetRoot}`);
+    console.log(`Package: ${report.metadata.package.name}@${report.metadata.package.version}`);
+    console.log(`Schema: ${report.metadata.schema.id}`);
+    console.log(`Installed files: ${report.metadata.installedFileCount}`);
+    console.log(`Missing files: ${report.metadata.missingFileCount}`);
     for (const check of checks) {
       console.log(`- ${check.passed ? "PASS" : "FAIL"}: ${check.name}`);
     }

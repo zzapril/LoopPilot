@@ -56,7 +56,7 @@ It does not run loops, install providers, start daemons, commit, push, or deploy
 node scripts/looppilot.mjs doctor --target both
 ```
 
-Doctor checks installed Agent Pack files, fixtures, runtime JSON Schema compatibility, schema drift, wrapper references, and wrapper parity, then prints a per-check pass/fail report.
+Doctor checks installed Agent Pack files, fixtures, runtime JSON Schema compatibility, schema drift, wrapper references, and wrapper parity, then prints a per-check pass/fail report. With `--json`, the report includes `metadata` with the CLI package name/version, decision schema `$id`, target, project path, timestamp, installed/missing file counts, and SHA-256 hashes for installed pack files; add `--output <path>` to write the JSON report to a file.
 
 ## Read-Only Repo Scan
 
