@@ -23,7 +23,8 @@
     "validate:save-commands": "node scripts/validate-save-commands.mjs",
     "validate:install-command": "node scripts/validate-install-command.mjs",
     "validate:scan-security": "node scripts/validate-scan-security.mjs",
-    "validate:schema-ajv": "node scripts/validate-schema-ajv.mjs"
+    "validate:schema-ajv": "node scripts/validate-schema-ajv.mjs",
+    "validate:cli-args": "node scripts/validate-cli-args.mjs"
   },
   "devDependencies": {
     "ajv": "^8.17.1"

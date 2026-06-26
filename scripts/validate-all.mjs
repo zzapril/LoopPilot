@@ -13,6 +13,7 @@ const commands = [
   ["node", ["scripts/validate-export-command.mjs"]],
   ["node", ["scripts/validate-save-commands.mjs"]],
   ["node", ["scripts/validate-install-command.mjs"]],
+  ["node", ["scripts/validate-cli-args.mjs"]],
 ];
 
 for (const [command, args] of commands) {

@@ -39,7 +39,7 @@ function printHelp() {
 
 Usage:
   looppilot install [--target both|codex|claude] [--scope project] [--cwd <path>] [--force] [--dry-run]
-  looppilot doctor [--target both|codex|claude] [--cwd <path>] [--json] [--output <path>]
+  looppilot doctor [--target both|codex|claude] [--cwd <path>] [--json] [--output <path>] [--force] [--dry-run]
   looppilot export --target codex|claude|github-issue [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-contract --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-report --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
@@ -68,13 +68,21 @@ function parseArgs(argv) {
     json: false,
   };
 
+  function readOptionValue(name, index) {
+    const value = rest[index + 1];
+    if (!value || value.startsWith("--")) {
+      throw new Error(`Missing value for ${name}.`);
+    }
+    return value;
+  }
+
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index];
-    if (arg === "--target") options.target = rest[++index];
-    else if (arg === "--scope") options.scope = rest[++index];
-    else if (arg === "--cwd") options.cwd = rest[++index];
-    else if (arg === "--output") options.output = rest[++index];
-    else if (arg === "--from") options.from = rest[++index];
+    if (arg === "--target") options.target = readOptionValue(arg, index++);
+    else if (arg === "--scope") options.scope = readOptionValue(arg, index++);
+    else if (arg === "--cwd") options.cwd = readOptionValue(arg, index++);
+    else if (arg === "--output") options.output = readOptionValue(arg, index++);
+    else if (arg === "--from") options.from = readOptionValue(arg, index++);
     else if (arg === "--json") options.json = true;
     else if (arg === "--force") options.force = true;
     else if (arg === "--dry-run") options.dryRun = true;
@@ -297,8 +305,16 @@ function doctor(options) {
     const output = JSON.stringify(report, null, 2);
     if (options.output) {
       const outputPath = path.resolve(targetRoot, options.output);
-      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-      fs.writeFileSync(outputPath, `${output}\n`);
+      if (fs.existsSync(outputPath) && !options.force) {
+        console.error(`LoopPilot error: ${path.relative(targetRoot, outputPath)} already exists. Re-run with --force to overwrite.`);
+        process.exit(1);
+      }
+      if (!options.dryRun) {
+        fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+        fs.writeFileSync(outputPath, `${output}\n`, "utf8");
+      }
+      console.log(`LoopPilot doctor JSON report ${options.dryRun ? "would be written" : "written"}.`);
+      console.log(`Output: ${path.relative(targetRoot, outputPath)}`);
     } else if (errors.length > 0) console.error(output);
     else console.log(output);
   } else if (errors.length > 0) {
