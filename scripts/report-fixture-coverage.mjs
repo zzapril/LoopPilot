@@ -32,31 +32,82 @@ const riskKeywords = [
   "凭证",
 ];
 
-const taxonomy = {
-  unknown_host: /"host":"unknown"|"capability_confidence":"unknown"/i,
-  dependency_install: /dependenc|install/i,
-  destructive_operation: /delete|drop|remove|destructive|删除|清空/i,
-  auth_or_permission: /auth|login|signup|permission|admin|鉴权|权限|管理员/i,
-  payment_or_billing: /payment|billing|revenue|checkout|支付|账单|结账/i,
-  production_or_deploy: /production|deploy|publish|发布|部署|生产/i,
-  secrets_or_credentials: /secret|token|credential|\.env|密钥|凭证/i,
-  commit_or_push: /commit|push/i,
-  migration_or_database: /migration|migrate|database|schema|迁移|数据库/i,
-  missing_or_weak_gate: /no objective|no safe local|not objective|unknown command|do not know the command|no test command/i,
-};
-
-const requiredTaxonomy = [
-  "unknown_host",
-  "dependency_install",
-  "destructive_operation",
-  "auth_or_permission",
-  "payment_or_billing",
-  "production_or_deploy",
-  "secrets_or_credentials",
-  "commit_or_push",
-  "migration_or_database",
-  "missing_or_weak_gate",
+const taxonomyMatrix = [
+  {
+    category: "unknown_host",
+    minExamples: 2,
+    pattern: /"host":"unknown"|"capability_confidence":"unknown"/i,
+    // Unknown hosts may lack edit, command, approval, or skill support, so LoopPilot must fall back to planning instead of automated execution.
+    safetyRationale: "Unknown host capabilities force PLAN_ONLY because execution guarantees cannot be verified.",
+  },
+  {
+    category: "dependency_install",
+    minExamples: 2,
+    pattern: /dependenc|install/i,
+    // Dependency installs can run arbitrary lifecycle scripts and change the trusted execution surface for every later loop round.
+    safetyRationale: "Dependency changes need human confirmation before a loop may alter or execute the environment.",
+  },
+  {
+    category: "destructive_operation",
+    minExamples: 2,
+    pattern: /delete|drop|remove|destructive|删除|清空/i,
+    // Destructive actions can erase code, data, or evidence that a bounded gate cannot reliably reconstruct.
+    safetyRationale: "Deletion and drop-style tasks must not be hidden inside an autonomous repair loop.",
+  },
+  {
+    category: "auth_or_permission",
+    minExamples: 2,
+    pattern: /auth|login|signup|permission|admin|鉴权|权限|管理员/i,
+    // Auth and permission edits can grant access, lock users out, or weaken account boundaries.
+    safetyRationale: "Identity and authorization work requires review beyond a passing local command.",
+  },
+  {
+    category: "payment_or_billing",
+    minExamples: 2,
+    pattern: /payment|billing|revenue|checkout|支付|账单|结账/i,
+    // Payment and billing logic has financial, compliance, and customer-impact risk.
+    safetyRationale: "Financial workflows are high risk even when a local test gate exists.",
+  },
+  {
+    category: "production_or_deploy",
+    minExamples: 2,
+    pattern: /production|deploy|publish|发布|部署|生产/i,
+    // Production, deploy, and publish actions affect live users or distributed artifacts outside the repo sandbox.
+    safetyRationale: "External release actions are outside v0 loop execution boundaries.",
+  },
+  {
+    category: "secrets_or_credentials",
+    minExamples: 2,
+    pattern: /secret|token|credential|\.env|密钥|凭证/i,
+    // Secrets and credentials must not be read, transformed, or exposed through logs and loop reports.
+    safetyRationale: "Secret-handling tasks need human-owned procedures instead of automated edits.",
+  },
+  {
+    category: "commit_or_push",
+    minExamples: 2,
+    pattern: /commit|push/i,
+    // Commit and push operations publish agent output into durable history or remote systems before review.
+    safetyRationale: "Version-control publication must be a deliberate human-approved boundary.",
+  },
+  {
+    category: "migration_or_database",
+    minExamples: 2,
+    pattern: /migration|migrate|database|schema|迁移|数据库/i,
+    // Migrations and database work can cause persistent data loss or irreversible schema drift.
+    safetyRationale: "Database-affecting work needs rollback planning and review before execution.",
+  },
+  {
+    category: "missing_or_weak_gate",
+    minExamples: 2,
+    pattern: /no objective|no safe local|not objective|unknown command|do not know the command|no test command/i,
+    // LoopPilot depends on objective local gates; weak gates let loops keep editing without proof of success.
+    safetyRationale: "A loop without a deterministic gate is not bounded or auditable.",
+  },
 ];
+
+const taxonomy = Object.fromEntries(taxonomyMatrix.map(({ category, pattern }) => [category, pattern]));
+
+const requiredTaxonomy = taxonomyMatrix.map(({ category }) => category);
 
 const counts = { NO_GO: 0, PLAN_ONLY: 0, RUN_WITH_CONTRACT: 0 };
 const riskCoverage = Object.fromEntries(riskKeywords.map((keyword) => [keyword, 0]));
@@ -104,7 +155,7 @@ for (const fixture of fixtures) {
 }
 
 const coveredRisks = Object.entries(riskCoverage).filter(([, count]) => count > 0);
-const uncoveredTaxonomy = requiredTaxonomy.filter((category) => taxonomyCoverage[category] === 0);
+const undercoveredTaxonomy = taxonomyMatrix.filter(({ category, minExamples }) => taxonomyCoverage[category] < minExamples);
 const summary = {
   total: fixtures.length,
   decisions: counts,
@@ -114,7 +165,13 @@ const summary = {
 };
 
 if (coveredRisks.length < 10) errors.push("risk keyword coverage is too low; expected at least 10 covered keywords");
-if (uncoveredTaxonomy.length > 0) errors.push(`missing required taxonomy coverage: ${uncoveredTaxonomy.join(", ")}`);
+if (undercoveredTaxonomy.length > 0) {
+  errors.push(
+    `missing required taxonomy coverage: ${undercoveredTaxonomy
+      .map(({ category, minExamples }) => `${category} (${taxonomyCoverage[category]}/${minExamples})`)
+      .join(", ")}`,
+  );
+}
 
 if (errors.length > 0) {
   console.error("LoopPilot fixture coverage validation failed:");
