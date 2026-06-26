@@ -169,9 +169,9 @@ scripts/looppilot.mjs
 - `validate-save-commands.mjs` 检查 `save-contract` / `save-report` / `save-review-gate` / `save-vision` / `save-state` / `save-run-log` 必须显式 `--from`，默认路径正确，duplicate 需 `--force`，`--dry-run` 不写文件。
 - `validate-manual-templates.mjs` 检查 v1 `VISION.md`、`STATE.md`、`RUN_LOG.md` 模板包含 schema/version/scope/gate/review/next-step 等必需字段。
 - `validate-review-gate-template.mjs` 检查 review-gate 模板仍是显式 evidence artifact，不是 approval/deploy/release gate。
-- `validate-package-contents.mjs` 检查 packed package contents 包含 core/templates/helpers/docs/progress notes，且不包含 `.looppilot/exports/`、`.looppilot/latest-*` 或生成的 v1 artifacts；随后解包并 smoke test `looppilot --help`、`doctor --json`、`install --dry-run`，再本地安装 tarball 并验证 `looppilot --help` bin shim。
+- `validate-package-contents.mjs` 检查 packed package contents 包含 core/templates/helpers/docs/progress notes，且不包含 `.looppilot/exports/`、`.looppilot/latest-*` 或生成的 v1 artifacts；随后本地安装 packed tarball，并 smoke test `looppilot --help`、`doctor --json`、`install --dry-run` 和 bin shim。
 - `validate-docs-consistency.mjs` 检查 README 与全部 `docs/*.md` 不回退到旧小写 artifact、旧 Ajv/parity 说法或未实现的 `looppilot check` 示例。
-- `validate-install-command.mjs` 在临时项目中验证 install 后 doctor --json 可通过。
+- `validate-install-command.mjs` 在临时项目中验证 install 后 doctor --json 可通过，并确认 project-root `--cwd` 不会把不存在的目录当成有效项目。
 - `looppilot.mjs` 支持 `install`、增强 `doctor`、`scan`、`host-capabilities`、`claude-project-summary`、显式 `export` 和显式 `save-*`。
 
 评估：

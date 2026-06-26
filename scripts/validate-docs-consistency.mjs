@@ -32,6 +32,7 @@ const forbiddenFragments = [
   "未引入外部 Ajv",
   "返回 403",
   "静态 parity",
+  "解包并 smoke test",
 ];
 
 const requiredFragmentsByFile = {

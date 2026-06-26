@@ -68,6 +68,8 @@ The installer copies:
 .claude/commands/should-loop.md
 ```
 
+For every command that accepts `--cwd`, the target project directory must already exist. This prevents a typo from creating a new project directory by accident or producing misleading missing-file errors.
+
 It does not run loops, install providers, start daemons, commit, push, or deploy.
 
 ## Check Installation
@@ -104,7 +106,7 @@ node scripts/looppilot.mjs host-capabilities
 
 The `host_capabilities` field is shaped to match the `host_capabilities` object in `.looppilot/core/decision-schema.json`. The helper is read-only and limits itself to safely available facts: current working directory, Git availability, package script names from `package.json`, and an allowlist of documented sandbox-indicator environment variables. It must not read secrets, private config contents, or arbitrary environment variables.
 
-This helper is advisory evidence only. It must not override LoopPilot's unknown host capability guardrails: if any required host capability is unavailable or uncertain, wrappers must still set `capability_confidence` to `unknown` and return `PLAN_ONLY`.
+This helper is advisory evidence only and does not claim full edit or approval capability by itself. It must not override LoopPilot's unknown host capability guardrails: if any required host capability is unavailable or uncertain, wrappers must still set `capability_confidence` to `unknown` and return `PLAN_ONLY`.
 
 ## Read-Only Claude Project Summary
 

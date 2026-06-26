@@ -58,8 +58,8 @@ const summary = {
     can_edit_files: false,
     can_run_commands: true,
     has_approval_flow: false,
-    supports_skills_or_commands: packageScripts.length > 0,
-    capability_confidence: host === "unknown" ? "unknown" : "known",
+    supports_skills_or_commands: host !== "unknown",
+    capability_confidence: "unknown",
   },
   evidence: {
     advisory_only: true,

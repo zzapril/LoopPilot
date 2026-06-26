@@ -93,6 +93,18 @@ function assertDoctorCommand(target) {
 const install = run(["install", "--target", "both", "--scope", "project", "--cwd", tempDir]);
 if (install.status !== 0) errors.push(`install failed: ${install.stderr || install.stdout}`);
 
+const missingInstallDir = `${tempDir}-missing`;
+const missingInstall = run(["install", "--target", "both", "--scope", "project", "--cwd", missingInstallDir, "--dry-run"]);
+if (missingInstall.status === 0) {
+  errors.push("install --cwd missing directory unexpectedly succeeded");
+} else {
+  const output = `${missingInstall.stderr}${missingInstall.stdout}`;
+  if (!output.includes("Project directory does not exist")) {
+    errors.push(`install --cwd missing directory returned unclear error: ${output.trim()}`);
+  }
+}
+if (fs.existsSync(missingInstallDir)) errors.push("install --cwd missing directory created the target directory");
+
 for (const file of expectedInstalledFiles) {
   if (!fs.existsSync(path.join(tempDir, file))) errors.push(`installed project missing ${file}`);
 }

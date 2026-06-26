@@ -167,6 +167,18 @@ function validateCommandOptions(options) {
       throw new Error(`${options.command} does not support ${option}.`);
     }
   }
+
+  if (options.command === "doctor") {
+    if (options.output && !options.json) {
+      throw new Error("doctor --output requires --json.");
+    }
+    if (options.force && !options.output) {
+      throw new Error("doctor --force requires --output.");
+    }
+    if (options.dryRun && !options.output) {
+      throw new Error("doctor --dry-run requires --output.");
+    }
+  }
 }
 
 function filesForTarget(target) {
@@ -179,6 +191,18 @@ function filesForTarget(target) {
 function assertProjectScope(scope) {
   if (scope !== "project") {
     throw new Error("LoopPilot v0 only supports --scope project.");
+  }
+}
+
+function assertDirectoryExists(directory, label) {
+  let stat;
+  try {
+    stat = fs.statSync(directory);
+  } catch {
+    throw new Error(`${label} directory does not exist: ${directory}`);
+  }
+  if (!stat.isDirectory()) {
+    throw new Error(`${label} path is not a directory: ${directory}`);
   }
 }
 
@@ -212,6 +236,7 @@ function copyPackFile(relativePath, targetRoot, options) {
 function install(options) {
   assertProjectScope(options.scope);
   const targetRoot = path.resolve(options.cwd);
+  assertDirectoryExists(targetRoot, "Project");
   const files = filesForTarget(options.target);
   const results = { written: 0, unchanged: 0, wouldWrite: 0 };
 
@@ -307,6 +332,7 @@ function exportHandoff(options) {
     throw new Error("Export requires --target codex, claude, or github-issue.");
   }
   const targetRoot = path.resolve(options.cwd);
+  assertDirectoryExists(targetRoot, "Project");
   const [templatePath, defaultOutputPath] = exportTemplateForTarget(options.target);
   const source = path.join(targetRoot, templatePath);
   if (!fs.existsSync(source)) throw new Error(`Export template is missing: ${templatePath}`);
@@ -329,6 +355,7 @@ function exportHandoff(options) {
 
 function saveExplicitFile(options, kind) {
   const targetRoot = path.resolve(options.cwd);
+  assertDirectoryExists(targetRoot, "Project");
   if (!options.from) throw new Error(`${kind} requires --from <path>.`);
   const source = path.resolve(targetRoot, options.from);
   if (!fs.existsSync(source)) throw new Error(`Source file is missing: ${path.relative(targetRoot, source)}`);
@@ -362,6 +389,7 @@ function saveExplicitFile(options, kind) {
 function doctor(options) {
   const startedAt = process.hrtime.bigint();
   const targetRoot = path.resolve(options.cwd);
+  assertDirectoryExists(targetRoot, "Project");
   const files = filesForTarget(options.target);
   const errors = [];
   const checks = [];
@@ -474,18 +502,21 @@ try {
     saveExplicitFile(options, "review-gate");
   } else if (options.command === "scan") {
     const targetRoot = path.resolve(options.cwd);
+    assertDirectoryExists(targetRoot, "Project");
     const scriptPath = path.join(targetRoot, ".looppilot/scripts/scan-summary.mjs");
     if (!fs.existsSync(scriptPath)) throw new Error("Scan helper is missing: .looppilot/scripts/scan-summary.mjs");
     const result = spawnSync(process.execPath, [scriptPath], { cwd: targetRoot, stdio: "inherit" });
     process.exit(result.status ?? 1);
   } else if (options.command === "host-capabilities") {
     const targetRoot = path.resolve(options.cwd);
+    assertDirectoryExists(targetRoot, "Project");
     const scriptPath = path.join(targetRoot, ".looppilot/scripts/host-capability-summary.mjs");
     if (!fs.existsSync(scriptPath)) throw new Error("Host capability summary helper is missing: .looppilot/scripts/host-capability-summary.mjs");
     const result = spawnSync(process.execPath, [scriptPath], { cwd: targetRoot, stdio: "inherit" });
     process.exit(result.status ?? 1);
   } else if (options.command === "claude-project-summary") {
     const targetRoot = path.resolve(options.cwd);
+    assertDirectoryExists(targetRoot, "Project");
     const scriptPath = path.join(targetRoot, ".looppilot/scripts/claude-project-summary.mjs");
     if (!fs.existsSync(scriptPath)) throw new Error("Claude project summary helper is missing: .looppilot/scripts/claude-project-summary.mjs");
     const result = spawnSync(process.execPath, [scriptPath], { cwd: targetRoot, stdio: "inherit" });

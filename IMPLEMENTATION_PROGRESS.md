@@ -17,7 +17,7 @@ Last updated: 2026-06-27
 - [x] Export command integration validation for all targets, dry-run, explicit output, duplicate protection, and force overwrite.
 - [x] Report and review-gate templates plus explicit `save-contract`, `save-report`, and `save-review-gate` commands for user-requested latest files.
 - [x] Package contents and docs consistency validation, including local packed-tarball install smoke checks.
-- [x] CLI argument validation including top-level help and command-specific unsupported option rejection.
+- [x] CLI argument validation including top-level help and command-specific unsupported/no-op option rejection.
 
 ## v1 Manual Artifact Progress
 

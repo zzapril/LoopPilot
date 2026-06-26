@@ -37,6 +37,13 @@ else {
     if (!summary || typeof summary !== "object" || Array.isArray(summary)) errors.push("summary must be an object");
     if (!summary.host_capabilities) errors.push("summary.host_capabilities is required");
     else errors.push(...validateJsonSchema(summary.host_capabilities, hostCapabilitiesSchema, "host_capabilities"));
+    if (summary.host_capabilities?.host !== "codex") errors.push("summary did not detect codex host from sandbox evidence");
+    if (summary.host_capabilities?.capability_confidence !== "unknown") {
+      errors.push("summary should keep capability confidence unknown when edit/approval capabilities are only advisory");
+    }
+    if (summary.host_capabilities?.supports_skills_or_commands !== true) {
+      errors.push("summary did not derive skills/commands support from known host evidence");
+    }
     if (summary.evidence?.cwd !== expectedCwd) errors.push("summary did not report current working directory evidence");
     if (summary.evidence?.git_available === undefined) errors.push("summary did not report git availability evidence");
     if (summary.evidence?.package_scripts_exist !== true) errors.push("summary did not report package script existence");

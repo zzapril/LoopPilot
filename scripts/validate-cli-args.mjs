@@ -1,9 +1,11 @@
 #!/usr/bin/env node
+import fs from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 const cli = path.resolve("scripts/looppilot.mjs");
 const errors = [];
+const missingProjectDir = path.join("/private/tmp", `looppilot-missing-cli-${process.pid}`);
 
 function run(args) {
   return spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
@@ -25,6 +27,16 @@ for (const [args, expected] of [
   [["install", "--json", "--dry-run"], "install does not support --json."],
   [["save-vision", "--target", "claude", "--from", "README.md", "--dry-run"], "save-vision does not support --target."],
   [["scan", "--target", "both"], "scan does not support --target."],
+  [["doctor", "--output", "doctor.json"], "doctor --output requires --json."],
+  [["doctor", "--force"], "doctor --force requires --output."],
+  [["doctor", "--dry-run"], "doctor --dry-run requires --output."],
+  [["install", "--cwd", missingProjectDir, "--dry-run"], "Project directory does not exist"],
+  [["doctor", "--cwd", missingProjectDir], "Project directory does not exist"],
+  [["export", "--target", "codex", "--cwd", missingProjectDir, "--dry-run"], "Project directory does not exist"],
+  [["save-report", "--cwd", missingProjectDir, "--from", "source.md", "--dry-run"], "Project directory does not exist"],
+  [["scan", "--cwd", missingProjectDir], "Project directory does not exist"],
+  [["host-capabilities", "--cwd", missingProjectDir], "Project directory does not exist"],
+  [["claude-project-summary", "--cwd", missingProjectDir], "Project directory does not exist"],
 ]) {
   const result = run(args);
   const output = `${result.stderr}${result.stdout}`;
@@ -33,6 +45,10 @@ for (const [args, expected] of [
   if (output.includes("paths[0]") || output.includes("Received undefined")) {
     errors.push(`${args.join(" ")}: leaked low-level Node.js argument error`);
   }
+}
+
+if (fs.existsSync(missingProjectDir)) {
+  errors.push("missing --cwd validation created the missing project directory");
 }
 
 if (errors.length > 0) {
