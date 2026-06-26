@@ -22,6 +22,10 @@
     "validate:export-command": "node scripts/validate-export-command.mjs",
     "validate:save-commands": "node scripts/validate-save-commands.mjs",
     "validate:install-command": "node scripts/validate-install-command.mjs",
-    "validate:scan-security": "node scripts/validate-scan-security.mjs"
+    "validate:scan-security": "node scripts/validate-scan-security.mjs",
+    "validate:schema-ajv": "node scripts/validate-schema-ajv.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1"
   }
 }
