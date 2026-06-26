@@ -61,13 +61,21 @@ function parseArgs(argv) {
     json: false,
   };
 
+  function readOptionValue(name, index) {
+    const value = rest[index + 1];
+    if (!value || value.startsWith("--")) {
+      throw new Error(`Missing value for ${name}.`);
+    }
+    return value;
+  }
+
   for (let index = 0; index < rest.length; index += 1) {
     const arg = rest[index];
-    if (arg === "--target") options.target = rest[++index];
-    else if (arg === "--scope") options.scope = rest[++index];
-    else if (arg === "--cwd") options.cwd = rest[++index];
-    else if (arg === "--output") options.output = rest[++index];
-    else if (arg === "--from") options.from = rest[++index];
+    if (arg === "--target") options.target = readOptionValue(arg, index++);
+    else if (arg === "--scope") options.scope = readOptionValue(arg, index++);
+    else if (arg === "--cwd") options.cwd = readOptionValue(arg, index++);
+    else if (arg === "--output") options.output = readOptionValue(arg, index++);
+    else if (arg === "--from") options.from = readOptionValue(arg, index++);
     else if (arg === "--json") options.json = true;
     else if (arg === "--force") options.force = true;
     else if (arg === "--dry-run") options.dryRun = true;
