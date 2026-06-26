@@ -27,6 +27,8 @@
     "validate:cli-args": "node scripts/validate-cli-args.mjs",
     "validate:manual-templates": "node scripts/validate-manual-templates.mjs",
     "validate:claude-project-summary": "node scripts/validate-claude-project-summary.mjs",
+    "host-capabilities": "node scripts/looppilot.mjs host-capabilities",
+    "validate:host-capabilities": "node scripts/validate-host-capability-summary.mjs",
     "eval:wrapper-parity": "node scripts/eval-wrapper-parity.mjs",
     "prepublishOnly": "npm test"
   },
@@ -41,7 +43,7 @@
     ".claude/skills/looppilot/SKILL.md",
     ".looppilot/core/",
     ".looppilot/fixtures/",
-    ".looppilot/scripts/scan-summary.mjs",
+    ".looppilot/scripts/",
     "scripts/",
     "README.md",
     "LICENSE"

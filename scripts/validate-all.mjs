@@ -10,6 +10,7 @@ const commands = [
   ["node", ["scripts/validate-scan-summary.mjs"]],
   ["node", ["scripts/validate-scan-security.mjs"]],
   ["node", ["scripts/validate-claude-project-summary.mjs"]],
+  ["node", ["scripts/validate-host-capability-summary.mjs"]],
   ["node", ["scripts/validate-exports.mjs"]],
   ["node", ["scripts/report-fixture-coverage.mjs"]],
   ["node", ["scripts/validate-export-command.mjs"]],

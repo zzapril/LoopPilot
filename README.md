@@ -18,6 +18,7 @@ Implemented:
 - Claude Code `should-loop` command alias that points to the Claude skill without duplicating rules.
 - Validation scripts for fixtures, runtime JSON Schema checks, schema drift, wrapper references, wrapper parity, scan output, scan secret-safety, export templates, manual artifact templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration.
 - Optional read-only repo scan helper.
+- Optional read-only host capability evidence helper for advisory host facts.
 - Explicit export command for Codex, Claude Code, and GitHub issue handoffs.
 - Explicit save commands for user-requested latest contract/report files and v1 manual artifacts.
 
@@ -58,6 +59,8 @@ The installer copies:
 .looppilot/core/
 .looppilot/fixtures/
 .looppilot/scripts/scan-summary.mjs
+.looppilot/scripts/claude-project-summary.mjs
+.looppilot/scripts/host-capability-summary.mjs
 .agents/skills/looppilot/SKILL.md
 .claude/skills/looppilot/SKILL.md
 .claude/commands/should-loop.md
@@ -88,6 +91,20 @@ node scripts/looppilot.mjs scan
 ```
 
 The scan reports dirty state, changed paths, candidate commands, risk paths, and sensitive path candidates such as `.env`. It does not read secret file contents.
+
+## Read-Only Host Capability Evidence
+
+The host capability helper prints optional JSON evidence for the current agent:
+
+```bash
+node scripts/looppilot.mjs host-capabilities
+```
+
+The `host_capabilities` field is shaped to match the `host_capabilities` object in `.looppilot/core/decision-schema.json`. The helper is read-only and limits itself to safely available facts: current working directory, Git availability, package script names from `package.json`, and an allowlist of documented sandbox-indicator environment variables. It must not read secrets, private config contents, or arbitrary environment variables.
+
+This helper is advisory evidence only. It must not override LoopPilot's unknown host capability guardrails: if any required host capability is unavailable or uncertain, wrappers must still set `capability_confidence` to `unknown` and return `PLAN_ONLY`.
+
+## Read-Only Claude Project Summary
 
 A separate Claude Code project summary helper reports only optional metadata from documented project-level Claude Code files. It checks for the LoopPilot Claude wrapper, command alias, and whether `.claude/settings.json` or `.claude/settings.local.json` contain top-level `permissions` or `hooks` objects. It does not output permission rules, hook commands, environment values, or other settings content:
 
@@ -163,7 +180,7 @@ All explicit save commands use duplicate protection, support `--force` to overwr
 npm test
 ```
 
-This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, export templates, manual artifact templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration satisfy the current safety gates.
+This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, host capability helper shape and secret-safety, Claude project summary secret-safety, export templates, manual artifact templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration satisfy the current safety gates.
 
 ## Optional Wrapper Output Parity Eval
 
