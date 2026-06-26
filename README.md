@@ -109,3 +109,15 @@ npm test
 ```
 
 This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, export templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration satisfy the current safety gates.
+
+## Optional Wrapper Output Parity Eval
+
+The release checklist can run a non-default wrapper output parity eval when Codex-wrapper and Claude-wrapper outputs are deterministic or have been captured as goldens:
+
+```bash
+npm run eval:wrapper-parity
+```
+
+The eval uses `evals/wrapper-parity/fixtures.jsonl` and loads golden wrapper outputs from `evals/wrapper-parity/goldens/codex.jsonl` and `evals/wrapper-parity/goldens/claude.jsonl` by default. To compare freshly generated provider outputs, set `LOOPPILOT_CODEX_OUTPUTS` and `LOOPPILOT_CLAUDE_OUTPUTS` to JSONL files with matching fixture `id` values.
+
+This is an optional release/eval gate, not a v0 runtime dependency and not part of `npm test`. It normalizes each wrapper output down to safety-critical fields only: `decision`, `confidence`, `needs_clarification`, `contract.gate`, `contract.stop_conditions`, and `contract.forbidden_actions`. The eval fails if those normalized fields diverge between wrappers.
