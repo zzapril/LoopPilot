@@ -39,6 +39,12 @@ function compareSchemaValidators(label, decision) {
   return { ajvErrors, localErrors };
 }
 
+function expectFailure(label, validatorName, validatorErrors) {
+  if (validatorErrors.length === 0) {
+    errors.push(`${label}: expected ${validatorName} to fail, got valid`);
+  }
+}
+
 fixtures.forEach((fixture, index) => {
   const label = `fixtures[${index}].expected_decision`;
   const { ajvErrors, localErrors } = compareSchemaValidators(label, fixture.expected_decision);
@@ -49,64 +55,73 @@ fixtures.forEach((fixture, index) => {
   }
 });
 
-const validRunDecision = fixtures.find((fixture) => fixture.expected_decision.decision === "RUN_WITH_CONTRACT")?.expected_decision;
-if (!validRunDecision) {
-  errors.push("fixtures: no RUN_WITH_CONTRACT fixture is available for negative cases");
+const runDecision = fixtures.find((fixture) => fixture.expected_decision.decision === "RUN_WITH_CONTRACT")?.expected_decision;
+const nonRunDecision = fixtures.find((fixture) => fixture.expected_decision.decision !== "RUN_WITH_CONTRACT")?.expected_decision;
+
+if (!runDecision || !nonRunDecision) {
+  errors.push("fixtures: expected at least one RUN_WITH_CONTRACT fixture and one non-RUN_WITH_CONTRACT fixture");
 } else {
   const negativeCases = [
     {
-      label: "negative.missing_required_decision",
+      label: "negative.missing_required_top_level_field",
+      base: runDecision,
       mutate(decision) {
-        delete decision.decision;
+        delete decision.confidence;
       },
-      expectAjvFailure: true,
-      expectLocalSchemaFailure: true,
-      expectCombinedFailure: true,
     },
     {
-      label: "negative.extra_property",
+      label: "negative.invalid_decision_enum",
+      base: runDecision,
       mutate(decision) {
-        decision.unexpected_property = true;
+        decision.decision = "RUN_FOREVER";
       },
-      expectAjvFailure: true,
-      expectLocalSchemaFailure: true,
-      expectCombinedFailure: true,
     },
     {
-      label: "negative.invalid_enum_value",
+      label: "negative.invalid_confidence_enum",
+      base: runDecision,
       mutate(decision) {
         decision.confidence = "certain";
       },
-      expectAjvFailure: true,
-      expectLocalSchemaFailure: true,
-      expectCombinedFailure: true,
     },
     {
-      label: "negative.run_contract_null",
+      label: "negative.extra_top_level_property",
+      base: runDecision,
+      mutate(decision) {
+        decision.unexpected = true;
+      },
+    },
+    {
+      label: "negative.contract_null_for_run_with_contract",
+      base: runDecision,
       mutate(decision) {
         decision.contract = null;
       },
-      expectAjvFailure: false,
-      expectLocalSchemaFailure: false,
-      expectCombinedFailure: true,
+    },
+    {
+      label: "negative.malformed_contract_object_for_run_with_contract",
+      base: runDecision,
+      mutate(decision) {
+        decision.contract = { goal: "missing required contract fields" };
+      },
+    },
+    {
+      label: "negative.contract_object_for_non_run_with_contract",
+      base: nonRunDecision,
+      mutate(decision) {
+        decision.contract = clone(runDecision.contract);
+      },
     },
   ];
 
   negativeCases.forEach((negativeCase) => {
-    const decision = clone(validRunDecision);
+    const decision = clone(negativeCase.base);
     negativeCase.mutate(decision);
     const { ajvErrors, localErrors } = compareSchemaValidators(negativeCase.label, decision);
     const combinedErrors = validateDecisionAgainstSchema(decision, schema, negativeCase.label);
 
-    if ((ajvErrors.length > 0) !== negativeCase.expectAjvFailure) {
-      errors.push(`${negativeCase.label}: Ajv failure expectation mismatch (${ajvErrors.length} errors)`);
-    }
-    if ((localErrors.length > 0) !== negativeCase.expectLocalSchemaFailure) {
-      errors.push(`${negativeCase.label}: local schema failure expectation mismatch (${localErrors.length} errors)`);
-    }
-    if ((combinedErrors.length > 0) !== negativeCase.expectCombinedFailure) {
-      errors.push(`${negativeCase.label}: combined validator failure expectation mismatch (${combinedErrors.length} errors)`);
-    }
+    expectFailure(negativeCase.label, "Ajv", ajvErrors);
+    expectFailure(negativeCase.label, "local schema", localErrors);
+    expectFailure(negativeCase.label, "combined validator", combinedErrors);
   });
 }
 
@@ -118,5 +133,5 @@ if (errors.length > 0) {
 
 console.log("LoopPilot Ajv schema validation passed.");
 console.log(`Fixtures checked: ${fixtures.length}`);
-console.log("Negative cases checked: missing required fields, extra properties, invalid enum values, RUN_WITH_CONTRACT contract null");
-console.log("npm test integration: omitted; run this check explicitly with npm run validate:schema-ajv after dev dependencies are installed.");
+console.log("Draft: 2020-12");
+console.log("Negative probes checked: 7");

@@ -52,6 +52,22 @@ function validateJsonSchemaNode(value, node, rootSchema, path, errors) {
     return;
   }
 
+  if (Array.isArray(node.allOf)) {
+    node.allOf.forEach((childNode, index) => {
+      validateJsonSchemaNode(value, childNode, rootSchema, `${path}.allOf[${index}]`, errors);
+    });
+  }
+
+  if (node.if) {
+    const conditionErrors = [];
+    validateJsonSchemaNode(value, node.if, rootSchema, path, conditionErrors);
+    if (conditionErrors.length === 0) {
+      if (node.then) validateJsonSchemaNode(value, node.then, rootSchema, path, errors);
+    } else if (node.else) {
+      validateJsonSchemaNode(value, node.else, rootSchema, path, errors);
+    }
+  }
+
   if (node.type) {
     const types = Array.isArray(node.type) ? node.type : [node.type];
     if (!types.some((type) => typeMatches(value, type))) {
@@ -62,6 +78,10 @@ function validateJsonSchemaNode(value, node, rootSchema, path, errors) {
 
   if (node.enum && !node.enum.some((entry) => Object.is(entry, value))) {
     errors.push(`${path}: value ${JSON.stringify(value)} is not in enum`);
+  }
+
+  if ("const" in node && !Object.is(node.const, value)) {
+    errors.push(`${path}: value ${JSON.stringify(value)} does not match const ${JSON.stringify(node.const)}`);
   }
 
   if (typeof value === "string") {
@@ -162,6 +182,16 @@ export function validateDecisionSchemaDefinition(schema) {
   ];
   if (!arraysEqual(contractRequired, expectedContractRequired)) {
     errors.push("properties.contract.required: contract required fields drifted from validator contract");
+  }
+
+  const conditionalContract = schema.allOf?.find((entry) => entry?.if?.properties?.decision?.const === "RUN_WITH_CONTRACT");
+  if (!conditionalContract) {
+    errors.push("schema.allOf: must enforce contract shape by decision");
+  } else {
+    const thenType = conditionalContract.then?.properties?.contract?.type;
+    const elseType = conditionalContract.else?.properties?.contract?.type;
+    if (thenType !== "object") errors.push("schema.allOf.then.properties.contract.type: must be object");
+    if (elseType !== "null") errors.push("schema.allOf.else.properties.contract.type: must be null");
   }
 
   return errors;

@@ -196,5 +196,31 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "RUN_WITH_CONTRACT"
+          }
+        },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "contract": {
+            "type": "object"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "contract": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
 }
