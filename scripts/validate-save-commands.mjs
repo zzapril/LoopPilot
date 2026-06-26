@@ -9,9 +9,9 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-save-"));
 const source = path.join(tempDir, "source.md");
 const reportOutput = path.join(tempDir, "latest-report.md");
 const contractOutput = path.join(tempDir, "latest-contract.md");
-const visionOutput = path.join(tempDir, "vision.md");
-const stateOutput = path.join(tempDir, "state.md");
-const runLogOutput = path.join(tempDir, "run-log.md");
+const visionOutput = path.join(tempDir, "VISION.md");
+const stateOutput = path.join(tempDir, "STATE.md");
+const runLogOutput = path.join(tempDir, "RUN_LOG.md");
 const reviewGateOutput = path.join(tempDir, "latest-review-gate.md");
 const errors = [];
 fs.writeFileSync(source, "# Saved by explicit test\n", "utf8");
@@ -45,6 +45,17 @@ for (const [command, output] of [
 
   const forced = run([command, "--from", source, "--output", output, "--force"]);
   if (forced.status !== 0) errors.push(`${command} --force failed: ${forced.stderr || forced.stdout}`);
+}
+
+for (const [command, expectedDefault] of [
+  ["save-vision", path.join(tempDir, ".looppilot", "VISION.md")],
+  ["save-state", path.join(tempDir, ".looppilot", "STATE.md")],
+  ["save-run-log", path.join(tempDir, ".looppilot", "RUN_LOG.md")],
+  ["save-review-gate", path.join(tempDir, ".looppilot", "latest-review-gate.md")],
+]) {
+  const result = run([command, "--cwd", tempDir, "--from", source]);
+  if (result.status !== 0) errors.push(`${command} default output failed: ${result.stderr || result.stdout}`);
+  if (!fs.existsSync(expectedDefault)) errors.push(`${command} did not write default output ${path.relative(tempDir, expectedDefault)}`);
 }
 
 fs.rmSync(tempDir, { recursive: true, force: true });

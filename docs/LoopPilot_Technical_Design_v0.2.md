@@ -66,10 +66,19 @@ Optional file outputs:
     qualification-rules.md
     decision-schema.json
     contract-template.md
+    report-template.md
+    vision-template.md
+    state-template.md
+    run-log-template.md
+    review-gate-template.md
   fixtures/
     decision-fixtures.jsonl
-  latest-contract.md
-  latest-report.md
+  latest-contract.md       # explicit save only
+  latest-report.md         # explicit save only
+  latest-review-gate.md    # explicit save only
+  VISION.md                # explicit v1 artifact save only
+  STATE.md                 # explicit v1 artifact save only
+  RUN_LOG.md               # explicit v1 artifact save only
   exports/
     RUN_IN_CODEX.md
     RUN_IN_CLAUDE.md
@@ -128,7 +137,7 @@ or:
 8. Ask for confirmation unless the user already explicitly confirmed.
 9. Current agent session executes the contract.
 10. Current agent writes final report in chat.
-11. Write `.looppilot/latest-report.md` only if the user asked to save it.
+11. Write latest files or v1 manual artifacts only if the user explicitly asked to save them.
 
 ### 3.3 Why no runner?
 
@@ -488,7 +497,7 @@ When decision is `RUN_WITH_CONTRACT`, the current agent must follow this protoco
 5. Stop immediately on any stop condition.
 6. Do not broaden scope without asking.
 7. Final answer must include report fields.
-8. Do not write `.looppilot/latest-contract.md` or `.looppilot/latest-report.md` unless the user asked to save them.
+8. Do not write `.looppilot/latest-contract.md`, `.looppilot/latest-report.md`, `.looppilot/latest-review-gate.md`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, or `.looppilot/RUN_LOG.md` unless the user asked to save them.
 
 The agent should not self-approve a widened scope. If the contract needs to change, stop and ask.
 
@@ -531,7 +540,7 @@ The contract content must stay the same across Codex and Claude Code. Only the w
 
 Files are optional in MVP. They help with audit and reuse, but default behavior is chat-first.
 
-Do not write these files unless the user explicitly asks to save the contract, save the report, or export a handoff.
+Do not write these files unless the user explicitly asks to save the contract, save the report, save review-gate evidence, save v1 manual artifacts, or export a handoff.
 
 ### 10.1 `.looppilot/latest-contract.md`
 
@@ -541,7 +550,23 @@ Human-readable contract for the current task.
 
 Final report from the latest agent execution.
 
-### 10.3 Export files
+### 10.3 `.looppilot/latest-review-gate.md`
+
+Latest explicit review-gate evidence. This is not an approval gate, deployment gate, release gate, or permission to merge/push/deploy.
+
+### 10.4 v1 manual artifacts
+
+Only generated on request:
+
+```text
+.looppilot/VISION.md
+.looppilot/STATE.md
+.looppilot/RUN_LOG.md
+```
+
+These are human-authored reusable artifacts. They are not background runner state, daemon checkpoints, scheduler inputs, or automatic execution records.
+
+### 10.5 Export files
 
 Only generated on request:
 
@@ -566,15 +591,26 @@ User: should this loop?
 Codex / Claude Code: runs LoopPilot check inline
 ```
 
-Optional CLI later:
+Current helper CLI:
 
 ```bash
-looppilot check "fix failing tests"
+looppilot install --target both --scope project
+looppilot doctor --target both --json
+looppilot scan
+looppilot host-capabilities
+looppilot claude-project-summary
 looppilot export --target codex
 looppilot export --target claude
+looppilot export --target github-issue
+looppilot save-contract --from /path/to/contract.md
+looppilot save-report --from /path/to/report.md
+looppilot save-review-gate --from /path/to/review-gate.md
+looppilot save-vision --from /path/to/vision.md
+looppilot save-state --from /path/to/state.md
+looppilot save-run-log --from /path/to/run-log.md
 ```
 
-No MVP command should be named `run`, because execution belongs to the current agent.
+No MVP command should be named `run`, because execution belongs to the current agent. A `check` command is also not part of the current release-ready surface; decision execution remains agent-native through Codex and Claude Code wrappers.
 
 ---
 

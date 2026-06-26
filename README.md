@@ -20,7 +20,7 @@ Implemented:
 - Optional read-only repo scan helper.
 - Optional read-only host capability evidence helper for advisory host facts.
 - Explicit export command for Codex, Claude Code, and GitHub issue handoffs.
-- Explicit save commands for user-requested latest contract/report files and v1 manual artifacts including review gates.
+- Explicit save commands for user-requested latest contract/report/review-gate files and v1 manual artifacts.
 
 Not implemented by design:
 
@@ -45,7 +45,7 @@ npm install --global @looppilot/cli
 looppilot install --target both --scope project
 ```
 
-The published package name is `@looppilot/cli`. The package is intended to be publishable after release review, but it must not be published until the packaged contents have been reviewed and generated `.looppilot/exports/` files or `.looppilot/latest-*` files are confirmed absent.
+The published package name is `@looppilot/cli` and the first release-ready version is `0.1.0`. The package is intended to be publishable after release review, but it must not be published until the packaged contents have been reviewed and generated `.looppilot/exports/`, `.looppilot/latest-*`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md` files are confirmed absent.
 
 From this repository during development:
 
@@ -132,7 +132,7 @@ Generated defaults:
 
 ## Explicit Save Commands
 
-Latest contract/report files are never written by default. Save them only when the user explicitly asks:
+Latest contract/report/review-gate files are never written by default. Save them only when the user explicitly asks:
 
 ```bash
 node scripts/looppilot.mjs save-contract --from /path/to/contract.md
@@ -171,9 +171,9 @@ node scripts/looppilot.mjs save-review-gate --from /path/to/review-gate.md
 Generated defaults:
 
 ```text
-.looppilot/vision.md
-.looppilot/state.md
-.looppilot/run-log.md
+.looppilot/VISION.md
+.looppilot/STATE.md
+.looppilot/RUN_LOG.md
 .looppilot/latest-review-gate.md
 ```
 

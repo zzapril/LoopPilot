@@ -8,19 +8,20 @@
 
 LoopPilot remains **chat-first by default**: the current host agent evaluates a task, renders a bounded contract, executes only when appropriate, and reports in the conversation. Reusable artifacts are optional project-local files that preserve intent, current state, and review history when a user explicitly asks for durable memory or handoff material.
 
-This document defines three optional files under `.looppilot/`:
+This document defines three optional durable files plus one explicit review-gate evidence file under `.looppilot/`:
 
 - `.looppilot/VISION.md` for stable project or loop intent.
 - `.looppilot/STATE.md` for the current manual loop state.
 - `.looppilot/RUN_LOG.md` for append-only audit notes about manually repeated loop rounds.
+- `.looppilot/latest-review-gate.md` for the latest explicit review-gate evidence when the user asks to save it.
 
-These files are **not** a background runner, queue, daemon, scheduler, or autonomous execution mechanism. They are documentation artifacts that make repeated manual work easier to resume and review.
+These files are **not** a background runner, queue, daemon, scheduler, or autonomous execution mechanism. They are documentation and evidence artifacts that make repeated manual work easier to resume and review.
 
 ## 2. Creation Policy
 
 ### 2.1 Default behavior
 
-LoopPilot must not create or update `.looppilot/VISION.md`, `.looppilot/STATE.md`, `.looppilot/RUN_LOG.md`, or any other durable artifact by default. The default remains:
+LoopPilot must not create or update `.looppilot/VISION.md`, `.looppilot/STATE.md`, `.looppilot/RUN_LOG.md`, `.looppilot/latest-review-gate.md`, or any other durable artifact by default. The default remains:
 
 1. Evaluate the task in chat.
 2. Render decision JSON and the human-readable contract in chat.
@@ -34,6 +35,7 @@ The reusable artifact files may be created only when the user explicitly request
 - “Save this LoopPilot state in the repo.”
 - “Create the `.looppilot` reusable artifacts for this loop.”
 - “Write a run log so another session can continue.”
+- “Save the latest review gate evidence.”
 - “Persist the vision and current state.”
 
 The files may also be updated when the user explicitly asks to continue using already-created LoopPilot artifacts. Even then, the agent must describe the intended writes before editing if the write scope is not obvious from the user request.
@@ -49,6 +51,28 @@ Do not create or update these files when the user only asks to:
 - Produce an example without asking to save it.
 
 A user asking for a loop does not imply permission to persist files.
+
+### 2.4 Explicit CLI save commands
+
+The CLI may persist these files only through explicit `save-*` commands with `--from`:
+
+```bash
+looppilot save-vision --from /path/to/vision.md
+looppilot save-state --from /path/to/state.md
+looppilot save-run-log --from /path/to/run-log.md
+looppilot save-review-gate --from /path/to/review-gate.md
+```
+
+Default outputs:
+
+```text
+.looppilot/VISION.md
+.looppilot/STATE.md
+.looppilot/RUN_LOG.md
+.looppilot/latest-review-gate.md
+```
+
+All save commands require `--from`, use duplicate protection by default, support `--force` to overwrite, and support `--dry-run` to preview without writing.
 
 ## 3. Artifact Schemas
 

@@ -9,6 +9,13 @@ function run(args) {
   return spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
 }
 
+for (const args of [["--help"], ["-h"], ["help"], ["doctor", "--help"]]) {
+  const result = run(args);
+  const output = `${result.stderr}${result.stdout}`;
+  if (result.status !== 0) errors.push(`${args.join(" ")}: expected help to succeed`);
+  if (!output.includes("Usage:")) errors.push(`${args.join(" ")}: expected help output, got ${JSON.stringify(output.trim())}`);
+}
+
 for (const [args, expected] of [
   [["doctor", "--cwd"], "Missing value for --cwd."],
   [["install", "--target", "--dry-run"], "Missing value for --target."],

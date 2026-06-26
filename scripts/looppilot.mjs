@@ -83,6 +83,11 @@ function parseArgs(argv) {
     json: false,
   };
 
+  if (command === "--help" || command === "-h" || command === "help") {
+    options.command = null;
+    options.help = true;
+  }
+
   function readOptionValue(name, index) {
     const value = rest[index + 1];
     if (!value || value.startsWith("--")) {
@@ -269,9 +274,9 @@ function saveExplicitFile(options, kind) {
   const defaultOutputs = {
     contract: ".looppilot/latest-contract.md",
     report: ".looppilot/latest-report.md",
-    vision: ".looppilot/vision.md",
-    state: ".looppilot/state.md",
-    "run-log": ".looppilot/run-log.md",
+    vision: ".looppilot/VISION.md",
+    state: ".looppilot/STATE.md",
+    "run-log": ".looppilot/RUN_LOG.md",
     "review-gate": ".looppilot/latest-review-gate.md",
   };
   const defaultOutput = defaultOutputs[kind];

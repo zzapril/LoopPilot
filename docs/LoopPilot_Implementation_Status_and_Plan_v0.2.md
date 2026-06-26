@@ -19,12 +19,12 @@
 - 已有 Codex 与 Claude Code wrapper，并且 wrapper 明确引用共享 core，不复制规则。
 - 已有 Claude Code command alias。
 - 已有 fixture validator、wrapper validator、统一 test 命令。
-- 已有一个轻量 CLI/脚本层，支持 `install`、`doctor`、`scan` 与显式 `export`，用于安装/检查 Agent Pack、生成只读证据摘要和导出 handoff。
-- 已有 runtime JSON Schema、schema drift、wrapper parity、scan output、scan secret-safety、export template、fixture coverage taxonomy、export command、save command、install/doctor integration 验证。
+- 已有一个轻量 CLI/脚本层，支持 `install`、`doctor`、`scan`、`host-capabilities`、`claude-project-summary`、显式 `export` 与显式 `save-*`，用于安装/检查 Agent Pack、生成只读证据摘要、导出 handoff 和保存用户明确要求的 artifacts。
+- 已有 runtime JSON Schema、Ajv cross-check、schema drift、wrapper parity、golden wrapper parity eval、scan output、scan secret-safety、host/Claude helper、export template、fixture coverage taxonomy、export command、save command、manual template、review-gate template、package contents、docs consistency、CLI args、install/doctor integration 验证。
 
 当前仍需注意的边界：
 
-- Schema 校验当前采用本地 runtime JSON Schema evaluator + schema drift + safety validator 组合实现；不依赖外部 npm 包，因此无需 Ajv 也能在本仓库内验证 fixtures。
+- Schema 校验当前采用本地 runtime JSON Schema evaluator + Ajv cross-check + schema drift + safety validator 组合实现；即使不接外部 provider，也能在本仓库内验证 fixtures 与 schema 兼容性。
 - Export fallback 已提供模板和显式 `looppilot export` 命令，但仍只是 handoff，不是受控执行。
 - Scan helper 已实现只读摘要，但不参与自动 decision；它只是给当前 agent 提供可选证据。
 - LoopPilot 仍然不做 runner、provider registry、scheduler、自动 commit/push/deploy。
@@ -42,7 +42,7 @@
 | Contract template | `RUN_WITH_CONTRACT` 必须显示 contract | 已完成 | contract template 已存在 | v0 完成 |
 | 45 fixtures | 至少 45 条，三类各 15 条 | 已完成 | `.looppilot/fixtures/decision-fixtures.jsonl` 有 45 行 | v0 完成 |
 | Fixture validator | 校验 schema 与 expected fields | 已完成 | `scripts/validate-fixtures.mjs`、`scripts/validate-schema.mjs` 与 `decision-validator.mjs` | v0 完成 |
-| Wrapper parity | Codex 与 Claude Code 同一任务 decision 一致 | 已增强 | `scripts/validate-wrapper-parity.mjs` 检查 workflow 与 guardrails 同构 | v0 完成 |
+| Wrapper parity | Codex 与 Claude Code 同一任务 decision 一致 | 已增强 | `scripts/validate-wrapper-parity.mjs` 检查 workflow 与 guardrails 同构，`npm run eval:wrapper-parity` 校验 golden output safety fields | v0 完成 |
 | Codex wrapper | `.agents/skills/looppilot/SKILL.md` | 已完成 | 文件存在并引用 core | v0 完成 |
 | Claude wrapper | `.claude/skills/looppilot/SKILL.md` | 已完成 | 文件存在并引用 core | v0 完成 |
 | Claude command alias | `.claude/commands/should-loop.md` 只引用 skill | 已完成 | command 文件明确不复制规则 | v0 完成 |
@@ -51,8 +51,8 @@
 | Install / doctor | 技术设计未强制，但可作为分发辅助 | 已完成 | `scripts/looppilot.mjs` 支持 install/doctor | 超出 v0，正向补充 |
 | Repo scan helper | v0.1：只读 scan summary | 已完成 | `.looppilot/scripts/scan-summary.mjs` 与 `scripts/validate-scan-summary.mjs` | v0.1 完成 |
 | Export fallback | v0.2：生成 Codex/Claude/GitHub issue handoff | 已完成 | `.looppilot/core/export-template-*.md` 与 `looppilot export` | v0.2 完成 |
-| Latest contract/report 保存 | 仅用户明确要求时保存 | 部分完成 | `.looppilot/core/report-template.md` 已提供 report 模板；仍不默认写 latest 文件 | 显式保存策略完成 |
-| Safety tests | 覆盖 payment/auth/deploy/secrets/unknown host 等 | 已增强 | `npm test` 覆盖 fixtures、schema、wrapper、parity、scan、export、coverage、export command、save command | 持续增强 |
+| Latest/review/manual artifact 保存 | 仅用户明确要求时保存 | 已完成 | `save-contract`、`save-report`、`save-review-gate`、`save-vision`、`save-state`、`save-run-log` 均要求 `--from`，默认 duplicate protection | v1 手工 artifact 策略完成 |
+| Safety tests | 覆盖 payment/auth/deploy/secrets/unknown host 等 | 已增强 | `npm test` 覆盖 fixtures、schema、Ajv、wrapper、parity、scan、host/Claude helper、export、coverage、manual templates、review gate、package contents、docs consistency、CLI args、install/doctor | 持续增强 |
 
 ---
 
@@ -120,7 +120,8 @@
 评估：
 
 - 结构符合技术设计。
-- 目前 wrapper validator 只做静态文本约束，尚未模拟同一 fixture 在两个 wrapper 中输出同一 decision；这属于“parity tests”尚未完全实现。
+- 当前已覆盖两层 parity：`validate-wrapper-parity.mjs` 检查 wrapper workflow/guardrails 同构，`npm run eval:wrapper-parity` 使用 golden wrapper outputs 校验安全关键字段一致。
+- 剩余边界是仍不调用真实 Codex/Claude provider 输出；这是 v0/v1 的刻意选择，避免把 LoopPilot 变成 provider registry 或 runner。
 
 ### 3.4 验证脚本与 CLI 辅助
 
@@ -128,14 +129,25 @@
 
 ```text
 scripts/validate-schema.mjs
+scripts/validate-schema-ajv.mjs
 scripts/validate-fixtures.mjs
 scripts/validate-wrappers.mjs
 scripts/validate-wrapper-parity.mjs
+scripts/eval-wrapper-parity.mjs
 scripts/validate-scan-summary.mjs
+scripts/validate-scan-security.mjs
+scripts/validate-host-capability-summary.mjs
+scripts/validate-claude-project-summary.mjs
 scripts/validate-exports.mjs
 scripts/report-fixture-coverage.mjs
 scripts/validate-export-command.mjs
 scripts/validate-save-commands.mjs
+scripts/validate-manual-templates.mjs
+scripts/validate-review-gate-template.mjs
+scripts/validate-package-contents.mjs
+scripts/validate-docs-consistency.mjs
+scripts/validate-cli-args.mjs
+scripts/validate-install-command.mjs
 scripts/validate-all.mjs
 scripts/lib/decision-validator.mjs
 scripts/lib/schema-validator.mjs
@@ -145,7 +157,7 @@ scripts/looppilot.mjs
 
 完成点：
 
-- `npm test` 会顺序运行 schema、fixture、wrapper、wrapper parity、scan summary、export template、fixture coverage、export command 和 save command validation。
+- `npm test` 会顺序运行 schema、Ajv cross-check、fixture、wrapper、wrapper parity、scan summary、安全 scan、host/Claude helper、export template、fixture coverage、export command、save command、manual template、review-gate template、package contents、docs consistency、CLI args 和 install/doctor validation。
 - `validate-fixtures.mjs` 检查 45 fixtures、三类各 15 条、decision 字段、安全 contract 不变量。
 - `validate-schema.mjs` 检查 schema drift，并使用本地 runtime JSON Schema evaluator 对 fixture decisions 做 schema-compatible validation。
 - `validate-wrappers.mjs` 检查 wrappers 是否引用 core、是否有正确 host profile、是否要求 JSON first。
@@ -154,9 +166,13 @@ scripts/looppilot.mjs
 - `validate-exports.mjs` 检查 export/report 模板安全声明。
 - `report-fixture-coverage.mjs` 统计 decision 分布、风险关键词覆盖、细分 taxonomy 覆盖，并防止高风险 fixture 进入 `RUN_WITH_CONTRACT`。
 - `validate-export-command.mjs` 检查全部 export targets 的 dry-run、显式 output、duplicate protection 和 `--force`。
-- `validate-save-commands.mjs` 检查 `save-contract` / `save-report` 必须显式写入且 duplicate 需 `--force`。
+- `validate-save-commands.mjs` 检查 `save-contract` / `save-report` / `save-review-gate` / `save-vision` / `save-state` / `save-run-log` 必须显式 `--from`，默认路径正确，duplicate 需 `--force`，`--dry-run` 不写文件。
+- `validate-manual-templates.mjs` 检查 v1 `VISION.md`、`STATE.md`、`RUN_LOG.md` 模板包含 schema/version/scope/gate/review/next-step 等必需字段。
+- `validate-review-gate-template.mjs` 检查 review-gate 模板仍是显式 evidence artifact，不是 approval/deploy/release gate。
+- `validate-package-contents.mjs` 检查 package dry-run contents 包含 core/templates/helpers，且不包含 `docs/`、`.looppilot/exports/`、`.looppilot/latest-*` 或生成的 v1 artifacts。
+- `validate-docs-consistency.mjs` 检查 README 与全部 `docs/*.md` 不回退到旧小写 artifact、旧 Ajv/parity 说法或未实现的 `looppilot check` 示例。
 - `validate-install-command.mjs` 在临时项目中验证 install 后 doctor --json 可通过。
-- `looppilot.mjs` 支持 `install`、增强 `doctor`、`scan`、显式 `export`、显式 `save-contract` 和 `save-report`。
+- `looppilot.mjs` 支持 `install`、增强 `doctor`、`scan`、`host-capabilities`、`claude-project-summary`、显式 `export` 和显式 `save-*`。
 
 评估：
 
@@ -173,23 +189,25 @@ scripts/looppilot.mjs
 
 - `scripts/lib/schema-validator.mjs`：检查 decision schema 与本地安全 validator 的 required fields、enum、contract required fields 是否漂移。
 - `scripts/validate-schema.mjs`：对 45 条 fixtures 的 `expected_decision` 做 schema-compatible validation。
+- `scripts/validate-schema-ajv.mjs`：用 Ajv 对 fixtures 做交叉校验，避免本地 evaluator 与标准 JSON Schema 行为长期漂移。
 - `npm test` 已纳入 schema validation。
 
 剩余边界：
 
-- 当前环境执行 `npm install --save-dev ajv@^8.17.1` 返回 403，因此没有引入外部 Ajv 依赖。当前方案仍以仓库内 schema 文件为源头做 drift 检查，并复用安全 validator 做结构/不变量校验。
+- Ajv 只是 schema-compatible cross-check，不替代 LoopPilot 安全 validator；`RUN_WITH_CONTRACT` 的 gate、scope、forbidden actions、host capability 等安全不变量仍由 `decision-validator.mjs` 明确检查。
 
 ### 4.2 Wrapper parity
 
 已新增：
 
 - `scripts/validate-wrapper-parity.mjs`：检查 Codex / Claude wrapper 的 core refs、workflow steps、guardrails 是否同构。
+- `scripts/eval-wrapper-parity.mjs`：读取 golden wrapper outputs，并比较 safety-critical normalized fields。
 - Claude command alias 增加禁止复制核心规则内容的检查。
 - `npm test` 已纳入 wrapper parity validation。
 
 剩余边界：
 
-- 该校验是静态 parity，不调用模型模拟真实 agent 输出。MVP 仍坚持 no provider / no runner，因此这是当前阶段可控的 parity gate。
+- 该校验不调用真实模型 provider，也不模拟长期执行。MVP 仍坚持 no provider / no runner，因此 golden parity 是当前阶段可控的 release gate。
 
 ### 4.3 Repo scan helper
 
@@ -299,7 +317,7 @@ scan helper 输出：
 任务：
 
 1. 新增 `scripts/validate-wrapper-parity.mjs`。
-2. 静态 parity 检查：
+2. Wrapper parity 检查：
    - Codex 与 Claude wrapper 必须引用同一 core 文件列表。
    - workflow 步骤数量和关键短语一致。
    - guardrails 关键规则一致。
@@ -400,22 +418,28 @@ scripts/validate-exports.mjs
 - 只有用户显式调用 export 才写文件。
 - export validator 检查安全免责声明与 core refs。
 
-### Phase 5：报告与保存模板（已完成）
+### Phase 5：报告、review gate 与 v1 手工 artifact 保存（已完成）
 
-目标：补齐 latest contract/report 的显式保存路径，但保持 chat-first 默认。
+目标：补齐 latest contract/report/review-gate 与 v1 手工 artifact 的显式保存路径，但保持 chat-first 默认。
 
 任务：
 
 1. 增加 `.looppilot/core/report-template.md`。
-2. 增加文档说明：只有用户明确要求保存时，agent 才写：
+2. 增加 `.looppilot/core/review-gate-template.md`、`vision-template.md`、`state-template.md`、`run-log-template.md`。
+3. 增加文档说明：只有用户明确要求保存时，agent 才写：
    - `.looppilot/latest-contract.md`
    - `.looppilot/latest-report.md`
-3. 增加 validator 检查：wrapper 不得说默认保存。
+   - `.looppilot/latest-review-gate.md`
+   - `.looppilot/VISION.md`
+   - `.looppilot/STATE.md`
+   - `.looppilot/RUN_LOG.md`
+4. 增加 validator 检查：wrapper 不得说默认保存，manual templates 必须包含 schema/version/scope/gate/review/next-step 等必需字段。
 
 验收：
 
 - 默认测试流程不产生 latest 文件。
 - report template 包含：what_changed、commands_run、gate_result、risks_or_blockers、next_steps。
+- v1 artifacts 是手工持久化文档，不是 runner state，不会默认创建或自动恢复执行。
 
 ### Phase 6：发布前质量门禁（已完成基础门禁）
 
@@ -450,7 +474,7 @@ node scripts/looppilot.mjs install --target both --scope project --dry-run
 
 ### P1：发布前可选增强
 
-1. 可选引入 Ajv 与本地 runtime JSON Schema evaluator 做交叉校验。
+1. 继续维护 Ajv 与本地 runtime JSON Schema evaluator 的交叉校验。
 2. 可继续扩展 fixture taxonomy，例如为每个 taxonomy 设置最低样例数。
 3. 可进一步把 doctor 输出扩展为 JSON report，方便 CI 机器读取。
 
@@ -497,6 +521,17 @@ node scripts/looppilot.mjs install --target both --scope project --dry-run
 - [x] export 文件明确说明不是受控执行。
 - [x] export validator 纳入 `npm test`。
 
+### v1 Reusable Artifacts DoD
+
+- [x] `VISION.md`、`STATE.md`、`RUN_LOG.md` 模板包含 schema/version/scope/gate/review/next-step 等必需字段。
+- [x] `save-vision` 默认写 `.looppilot/VISION.md`。
+- [x] `save-state` 默认写 `.looppilot/STATE.md`。
+- [x] `save-run-log` 默认写 `.looppilot/RUN_LOG.md`。
+- [x] `save-review-gate` 默认继续写 `.looppilot/latest-review-gate.md`。
+- [x] 所有 `save-*` 命令要求显式 `--from`，默认 duplicate protection，`--force` 覆盖，`--dry-run` 不写文件。
+- [x] package contents validator 确认 package 包含 core/templates/helpers，且不包含 generated exports、latest files 或生成的 v1 artifacts。
+- [x] docs consistency validator 确认 README 与全部 `docs/*.md` 和 uppercase artifact、review gate、release-ready CLI surface 保持一致。
+
 ---
 
 ## 8. 当前可执行检查结果
@@ -505,6 +540,10 @@ node scripts/looppilot.mjs install --target both --scope project --dry-run
 
 ```bash
 npm test
+npm run eval:wrapper-parity
+node scripts/looppilot.mjs doctor --target both --json
+env npm_config_cache=/private/tmp/looppilot-npm-cache npm pack --dry-run
+git diff --check
 ```
 
 结果：通过。
@@ -512,27 +551,34 @@ npm test
 输出摘要：
 
 ```text
-LoopPilot fixture validation passed.
-Fixtures: 45
-NO_GO: 15
-PLAN_ONLY: 15
-RUN_WITH_CONTRACT: 15
-LoopPilot wrapper validation passed.
-Wrappers: 2
-Claude command alias: present
-LoopPilot wrapper parity validation passed.
-LoopPilot scan summary validation passed.
-LoopPilot scan security validation passed.
-LoopPilot export validation passed.
-LoopPilot fixture coverage validation passed.
-Runtime JSON Schema checks: enabled
-LoopPilot export command validation passed.
-LoopPilot save command validation passed.
-LoopPilot install command validation passed.
+npm test:
+- Schema validation passed.
+- Ajv schema validation passed for 45 fixtures and 7 negative probes.
+- Fixture distribution: 15 NO_GO, 15 PLAN_ONLY, 15 RUN_WITH_CONTRACT.
+- Wrapper, wrapper parity, scan, scan security, Claude project summary, host capability summary, export, fixture coverage, save command, manual template, review-gate template, package contents, docs consistency, install, and CLI argument validation passed.
+
+eval:wrapper-parity:
+- Golden wrapper output parity passed for 4 fixtures.
+
+doctor --target both --json:
+- ok: true
+- package: @looppilot/cli@0.1.0
+- installedFileCount: 18
+- missingFileCount: 0
+- core files include uppercase v1 templates and helper scripts.
+
+npm pack --dry-run:
+- Package version: 0.1.0
+- total files: 46
+- includes uppercase v1 templates and helper scripts.
+- excludes generated `.looppilot/exports/`, `.looppilot/latest-*`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md`.
+
+git diff --check:
+- no whitespace errors.
 ```
 
 ---
 
 ## 9. 一句话方案
 
-**当前已补齐本地 runtime JSON Schema validation、schema drift、wrapper parity、fixture coverage taxonomy、只读且报告敏感路径的 scan helper、scan secret-safety、显式 export fallback、显式 save commands、install/doctor integration 与 report template；后续重点是保持安全门禁稳定，并继续坚持 agent-native、chat-first、no runner、no provider、no automatic commit/push/deploy。**
+**当前已补齐本地 runtime JSON Schema validation、Ajv cross-check、schema drift、wrapper parity、golden wrapper parity eval、fixture coverage taxonomy、只读且报告敏感路径的 scan helper、scan secret-safety、host/Claude helper、显式 export fallback、显式 save commands、manual artifact templates、review-gate template、package contents validation、docs consistency validation、install/doctor integration 与 release-ready `0.1.0` 元数据；后续重点是保持安全门禁稳定，并继续坚持 agent-native、chat-first、no runner、no provider、no automatic commit/push/deploy。**
