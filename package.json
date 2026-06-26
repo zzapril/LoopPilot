@@ -12,6 +12,16 @@
     "install:project": "node scripts/looppilot.mjs install --target both --scope project",
     "validate:fixtures": "node scripts/validate-fixtures.mjs",
     "validate:wrappers": "node scripts/validate-wrappers.mjs",
-    "test": "node scripts/validate-all.mjs"
+    "test": "node scripts/validate-all.mjs",
+    "validate:schema": "node scripts/validate-schema.mjs",
+    "validate:wrapper-parity": "node scripts/validate-wrapper-parity.mjs",
+    "validate:scan": "node scripts/validate-scan-summary.mjs",
+    "validate:exports": "node scripts/validate-exports.mjs",
+    "scan": "node .looppilot/scripts/scan-summary.mjs",
+    "report:coverage": "node scripts/report-fixture-coverage.mjs",
+    "validate:export-command": "node scripts/validate-export-command.mjs",
+    "validate:save-commands": "node scripts/validate-save-commands.mjs",
+    "validate:install-command": "node scripts/validate-install-command.mjs",
+    "validate:scan-security": "node scripts/validate-scan-security.mjs"
   }
 }
