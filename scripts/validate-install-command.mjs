@@ -21,6 +21,7 @@ for (const file of [
   ".looppilot/core/contract-template.md",
   ".looppilot/fixtures/decision-fixtures.jsonl",
   ".looppilot/scripts/scan-summary.mjs",
+  ".looppilot/scripts/claude-project-summary.mjs",
   ".agents/skills/looppilot/SKILL.md",
   ".claude/skills/looppilot/SKILL.md",
   ".claude/commands/should-loop.md",

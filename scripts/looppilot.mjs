@@ -19,6 +19,7 @@ const coreFiles = [
   ".looppilot/core/report-template.md",
   ".looppilot/fixtures/decision-fixtures.jsonl",
   ".looppilot/scripts/scan-summary.mjs",
+  ".looppilot/scripts/claude-project-summary.mjs",
 ];
 
 const codexFiles = [".agents/skills/looppilot/SKILL.md"];
@@ -37,6 +38,7 @@ Usage:
   looppilot save-contract --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-report --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot scan [--cwd <path>]
+  looppilot claude-project-summary [--cwd <path>]
 
 Notes:
   install copies the Agent Pack only. It does not run loops.
@@ -44,6 +46,7 @@ Notes:
   export writes handoff files only when explicitly requested. It does not execute loops.
   save-contract and save-report write latest files only when explicitly requested.
   scan prints a read-only repository evidence summary.
+  claude-project-summary prints optional read-only Claude project metadata only.
 `);
 }
 
@@ -292,6 +295,13 @@ try {
     const targetRoot = path.resolve(options.cwd);
     const scriptPath = path.join(targetRoot, ".looppilot/scripts/scan-summary.mjs");
     if (!fs.existsSync(scriptPath)) throw new Error("Scan helper is missing: .looppilot/scripts/scan-summary.mjs");
+    const result = spawnSync(process.execPath, [scriptPath], { cwd: targetRoot, stdio: "inherit" });
+    process.exit(result.status ?? 1);
+  } else if (options.command === "claude-project-summary") {
+    const { spawnSync } = await import("node:child_process");
+    const targetRoot = path.resolve(options.cwd);
+    const scriptPath = path.join(targetRoot, ".looppilot/scripts/claude-project-summary.mjs");
+    if (!fs.existsSync(scriptPath)) throw new Error("Claude project summary helper is missing: .looppilot/scripts/claude-project-summary.mjs");
     const result = spawnSync(process.execPath, [scriptPath], { cwd: targetRoot, stdio: "inherit" });
     process.exit(result.status ?? 1);
   } else {

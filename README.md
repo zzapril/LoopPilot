@@ -68,6 +68,12 @@ node scripts/looppilot.mjs scan
 
 The scan reports dirty state, changed paths, candidate commands, risk paths, and sensitive path candidates such as `.env`. It does not read secret file contents.
 
+A separate Claude Code project summary helper reports only optional metadata from documented project-level Claude Code files. It checks for the LoopPilot Claude wrapper, command alias, and whether `.claude/settings.json` or `.claude/settings.local.json` contain top-level `permissions` or `hooks` objects. It does not output permission rules, hook commands, environment values, or other settings content:
+
+```bash
+node scripts/looppilot.mjs claude-project-summary
+```
+
 ## Explicit Export Fallback
 
 Exports are handoff files only. They are not controlled execution, and the receiving agent must re-run the LoopPilot decision flow.
