@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 const root = process.cwd();
 const maxSensitiveWalkDepth = 3;
 const maxSensitiveCandidates = 200;
+const ignoredScanDirectories = new Set([".git", "node_modules", ".next", "dist", "build", "coverage", "vendor"]);
 const sensitivePatterns = [
   /(^|\/)\.env(?:\..*)?$/,
   /(^|\/)[^/]+\.pem$/,
@@ -57,10 +58,14 @@ function sensitiveRootFiles() {
   return rootFileNames().filter(isSensitive);
 }
 
+function shouldSkipDirectory(name) {
+  return ignoredScanDirectories.has(name);
+}
+
 function discoverSensitiveCandidates() {
   const candidates = new Set(sensitiveRootFiles().map(normalizePath));
   const queue = rootFileNames()
-    .filter((name) => name !== ".git")
+    .filter((name) => !shouldSkipDirectory(name))
     .map((name) => ({ relativePath: name, depth: 0 }));
 
   while (queue.length > 0 && candidates.size < maxSensitiveCandidates) {
@@ -78,7 +83,7 @@ function discoverSensitiveCandidates() {
     }
 
     for (const entry of entries) {
-      if (entry.name === ".git") continue;
+      if (entry.isDirectory() && shouldSkipDirectory(entry.name)) continue;
       const child = path.join(current.relativePath, entry.name);
       const childNormalized = normalizePath(child);
       if (isSensitive(childNormalized)) candidates.add(childNormalized);
