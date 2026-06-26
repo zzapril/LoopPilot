@@ -21,6 +21,7 @@ const expectedInstalledFiles = [
   ".looppilot/core/vision-template.md",
   ".looppilot/core/state-template.md",
   ".looppilot/core/run-log-template.md",
+  ".looppilot/core/review-gate-template.md",
   ".looppilot/fixtures/decision-fixtures.jsonl",
   ".looppilot/scripts/scan-summary.mjs",
   ".looppilot/scripts/claude-project-summary.mjs",
@@ -57,7 +58,7 @@ function assertDoctorMetadata(report, label) {
   if (!Array.isArray(metadata.wrapper_files) || metadata.wrapper_files.length !== 3) {
     errors.push(`${label} metadata wrapper_files mismatch`);
   }
-  if (!Array.isArray(metadata.core_files) || metadata.core_files.length !== 14) {
+  if (!Array.isArray(metadata.core_files) || metadata.core_files.length !== 15) {
     errors.push(`${label} metadata core_files mismatch`);
   }
   if (!Number.isInteger(metadata.duration_ms) || metadata.duration_ms < 0) {

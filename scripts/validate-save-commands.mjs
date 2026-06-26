@@ -12,6 +12,7 @@ const contractOutput = path.join(tempDir, "latest-contract.md");
 const visionOutput = path.join(tempDir, "vision.md");
 const stateOutput = path.join(tempDir, "state.md");
 const runLogOutput = path.join(tempDir, "run-log.md");
+const reviewGateOutput = path.join(tempDir, "latest-review-gate.md");
 const errors = [];
 fs.writeFileSync(source, "# Saved by explicit test\n", "utf8");
 
@@ -25,6 +26,7 @@ for (const [command, output] of [
   ["save-vision", visionOutput],
   ["save-state", stateOutput],
   ["save-run-log", runLogOutput],
+  ["save-review-gate", reviewGateOutput],
 ]) {
   const missingFrom = run([command, "--output", output]);
   if (missingFrom.status === 0) errors.push(`${command} should require --from <path>`);

@@ -16,6 +16,7 @@ const commands = [
   ["node", ["scripts/validate-export-command.mjs"]],
   ["node", ["scripts/validate-save-commands.mjs"]],
   ["node", ["scripts/validate-manual-templates.mjs"]],
+  ["node", ["scripts/validate-review-gate-template.mjs"]],
   ["node", ["scripts/validate-install-command.mjs"]],
   ["node", ["scripts/validate-cli-args.mjs"]],
 ];

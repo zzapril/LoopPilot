@@ -12,15 +12,15 @@ The implementation status document is kept as an internal/audit record: [LoopPil
 
 Implemented:
 
-- Shared LoopPilot core rules, decision schema, contract template, report/export templates, and v1 manual artifact templates.
+- Shared LoopPilot core rules, decision schema, contract template, report/export templates, and v1 manual artifact templates including review gates.
 - 45 decision fixtures: 15 `NO_GO`, 15 `PLAN_ONLY`, and 15 `RUN_WITH_CONTRACT`.
 - Codex and Claude Code wrappers that reference the same shared core.
 - Claude Code `should-loop` command alias that points to the Claude skill without duplicating rules.
-- Validation scripts for fixtures, runtime JSON Schema checks, schema drift, wrapper references, wrapper parity, scan output, scan secret-safety, export templates, manual artifact templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration.
+- Validation scripts for fixtures, runtime JSON Schema checks, schema drift, wrapper references, wrapper parity, scan output, scan secret-safety, export templates, manual artifact templates, review-gate template, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration.
 - Optional read-only repo scan helper.
 - Optional read-only host capability evidence helper for advisory host facts.
 - Explicit export command for Codex, Claude Code, and GitHub issue handoffs.
-- Explicit save commands for user-requested latest contract/report files and v1 manual artifacts.
+- Explicit save commands for user-requested latest contract/report files and v1 manual artifacts including review gates.
 
 Not implemented by design:
 
@@ -137,6 +137,7 @@ Latest contract/report files are never written by default. Save them only when t
 ```bash
 node scripts/looppilot.mjs save-contract --from /path/to/contract.md
 node scripts/looppilot.mjs save-report --from /path/to/report.md
+node scripts/looppilot.mjs save-review-gate --from /path/to/review-gate.md
 ```
 
 Generated defaults:
@@ -144,16 +145,18 @@ Generated defaults:
 ```text
 .looppilot/latest-contract.md
 .looppilot/latest-report.md
+.looppilot/latest-review-gate.md
 ```
 
 ## v1 Manual Artifact Templates
 
-LoopPilot includes v1 manual artifact templates for project vision, current state, and run logs. These are human-authored artifacts, not background runner state files, daemon checkpoints, scheduler inputs, or automatic execution records. They are never written by default.
+LoopPilot includes v1 manual artifact templates for project vision, current state, run logs, and review gates. These are human-authored artifacts, not background runner state files, daemon checkpoints, scheduler inputs, automatic execution records, approval gates, deployment gates, release gates, or permission to merge/push/deploy. They are never written by default.
 
 ```text
 .looppilot/core/vision-template.md
 .looppilot/core/state-template.md
 .looppilot/core/run-log-template.md
+.looppilot/core/review-gate-template.md
 ```
 
 Save manual artifacts only when explicitly requested:
@@ -162,6 +165,7 @@ Save manual artifacts only when explicitly requested:
 node scripts/looppilot.mjs save-vision --from /path/to/vision.md
 node scripts/looppilot.mjs save-state --from /path/to/state.md
 node scripts/looppilot.mjs save-run-log --from /path/to/run-log.md
+node scripts/looppilot.mjs save-review-gate --from /path/to/review-gate.md
 ```
 
 Generated defaults:
@@ -170,6 +174,7 @@ Generated defaults:
 .looppilot/vision.md
 .looppilot/state.md
 .looppilot/run-log.md
+.looppilot/latest-review-gate.md
 ```
 
 All explicit save commands use duplicate protection, support `--force` to overwrite, and support `--dry-run` to preview without writing.
@@ -180,7 +185,7 @@ All explicit save commands use duplicate protection, support `--force` to overwr
 npm test
 ```
 
-This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, host capability helper shape and secret-safety, Claude project summary secret-safety, export templates, manual artifact templates, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration satisfy the current safety gates.
+This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, schema drift, wrappers, wrapper parity, scan helper output, scan secret-safety, host capability helper shape and secret-safety, Claude project summary secret-safety, export templates, manual artifact templates, review-gate template, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration satisfy the current safety gates.
 
 ## Optional Wrapper Output Parity Eval
 

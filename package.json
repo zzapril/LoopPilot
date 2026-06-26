@@ -26,6 +26,7 @@
     "validate:schema-ajv": "node scripts/validate-schema-ajv.mjs",
     "validate:cli-args": "node scripts/validate-cli-args.mjs",
     "validate:manual-templates": "node scripts/validate-manual-templates.mjs",
+    "validate:review-gate-template": "node scripts/validate-review-gate-template.mjs",
     "validate:claude-project-summary": "node scripts/validate-claude-project-summary.mjs",
     "host-capabilities": "node scripts/looppilot.mjs host-capabilities",
     "validate:host-capabilities": "node scripts/validate-host-capability-summary.mjs",

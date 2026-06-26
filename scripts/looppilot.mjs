@@ -22,6 +22,7 @@ const coreFiles = [
   ".looppilot/core/vision-template.md",
   ".looppilot/core/state-template.md",
   ".looppilot/core/run-log-template.md",
+  ".looppilot/core/review-gate-template.md",
   ".looppilot/fixtures/decision-fixtures.jsonl",
   ".looppilot/scripts/scan-summary.mjs",
   ".looppilot/scripts/claude-project-summary.mjs",
@@ -52,6 +53,7 @@ Usage:
   looppilot save-vision --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-state --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-run-log --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
+  looppilot save-review-gate --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot scan [--cwd <path>]
   looppilot host-capabilities [--cwd <path>]
   looppilot claude-project-summary [--cwd <path>]
@@ -270,6 +272,7 @@ function saveExplicitFile(options, kind) {
     vision: ".looppilot/vision.md",
     state: ".looppilot/state.md",
     "run-log": ".looppilot/run-log.md",
+    "review-gate": ".looppilot/latest-review-gate.md",
   };
   const defaultOutput = defaultOutputs[kind];
   if (!defaultOutput) throw new Error(`Unsupported save kind: ${kind}`);
@@ -400,6 +403,8 @@ try {
     saveExplicitFile(options, "state");
   } else if (options.command === "save-run-log") {
     saveExplicitFile(options, "run-log");
+  } else if (options.command === "save-review-gate") {
+    saveExplicitFile(options, "review-gate");
   } else if (options.command === "scan") {
     const targetRoot = path.resolve(options.cwd);
     const scriptPath = path.join(targetRoot, ".looppilot/scripts/scan-summary.mjs");
