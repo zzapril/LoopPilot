@@ -38,7 +38,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zzapril/LoopPilot.git"
+    "url": "git+https://github.com/zzapril/LoopPilot.git"
   },
   "files": [
     ".agents/skills/looppilot/SKILL.md",

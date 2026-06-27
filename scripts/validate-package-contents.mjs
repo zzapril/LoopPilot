@@ -9,12 +9,19 @@ const packDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-pack-"));
 const installDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-pack-install-"));
 const errors = [];
 
-const result = spawnSync("npm", ["pack", "--json", "--pack-destination", packDir], {
-  encoding: "utf8",
-  env: {
+function npmValidationEnv() {
+  return {
     ...process.env,
     npm_config_cache: cacheDir,
-  },
+    // `npm publish --dry-run` exports this flag to lifecycle scripts. This
+    // validator must still create a real temporary tarball for local smoke tests.
+    npm_config_dry_run: "false",
+  };
+}
+
+const result = spawnSync("npm", ["pack", "--json", "--pack-destination", packDir], {
+  encoding: "utf8",
+  env: npmValidationEnv(),
 });
 
 if (result.status !== 0) {
@@ -92,10 +99,7 @@ if (result.status !== 0) {
       const npmInstall = spawnSync("npm", ["install", tarballPath, "--ignore-scripts", "--no-audit", "--no-fund"], {
         cwd: installDir,
         encoding: "utf8",
-        env: {
-          ...process.env,
-          npm_config_cache: cacheDir,
-        },
+        env: npmValidationEnv(),
       });
       if (npmInstall.status !== 0) {
         errors.push(`packed package local install failed: ${npmInstall.stderr || npmInstall.stdout}`);
