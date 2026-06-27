@@ -18,6 +18,7 @@ Implemented:
 - 45 decision fixtures: 15 `NO_GO`, 15 `PLAN_ONLY`, and 15 `RUN_WITH_CONTRACT`.
 - Codex and Claude Code wrappers that reference the same shared core.
 - Claude Code `should-loop` command alias that points to the Claude skill without duplicating rules.
+- Agent-native GitHub issue URL intake for Codex and Claude Code, backed by a read-only issue-intake helper.
 - Validation scripts for fixtures, runtime JSON Schema checks, schema drift, wrapper references, wrapper parity, scan output, scan secret-safety, export templates, manual artifact templates, review-gate template, fixture coverage taxonomy, export command behavior, explicit save commands, and install/doctor integration.
 - Optional read-only repo scan helper.
 - Optional read-only host capability evidence helper for advisory host facts.
@@ -29,31 +30,37 @@ Not implemented by design:
 - No loop runner.
 - No background daemon.
 - No model provider registry.
-- No scheduled loop platform.
+- No scheduled loop platform or GitHub issue queue.
 - No automatic commit, push, deploy, publish, or dependency installation.
 
 ## Install In A Project
 
-Install the published CLI with `npx` and choose the agent target and installation scope for your project:
+This repository is currently `0.2.0` release-ready, while npm latest is still `0.1.0`. Until `0.2.0` is published, install from this repository checkout when you want GitHub issue intake:
 
 ```bash
-npx @looppilot/cli install --target both --scope project
+node scripts/looppilot.mjs install --target both --scope project --cwd /path/to/your/project
 ```
 
-For Claude Code only:
+After `0.2.0` is published, install the published CLI with an explicit version:
 
 ```bash
-npx @looppilot/cli install --target claude --scope project
+npx @looppilot/cli@0.2.0 install --target both --scope project
+```
+
+For Claude Code only after publish:
+
+```bash
+npx @looppilot/cli@0.2.0 install --target claude --scope project
 ```
 
 You can also install the package globally if you prefer a reusable local command:
 
 ```bash
-npm install --global @looppilot/cli
+npm install --global @looppilot/cli@0.2.0
 looppilot install --target both --scope project
 ```
 
-The published package name is `@looppilot/cli`. The first public version is `0.1.0`: https://www.npmjs.com/package/@looppilot/cli.
+The published package name is `@looppilot/cli`. The latest published npm version remains `0.1.0`: https://www.npmjs.com/package/@looppilot/cli. Do not assume unpinned `npx @looppilot/cli` has the GitHub issue intake helper until `0.2.0` is explicitly published and tagged latest.
 
 The installer copies:
 
@@ -63,6 +70,7 @@ The installer copies:
 .looppilot/scripts/scan-summary.mjs
 .looppilot/scripts/claude-project-summary.mjs
 .looppilot/scripts/host-capability-summary.mjs
+.looppilot/scripts/issue-intake.mjs
 .agents/skills/looppilot/SKILL.md
 .claude/skills/looppilot/SKILL.md
 .claude/commands/should-loop.md
@@ -115,6 +123,31 @@ A separate Claude Code project summary helper reports only optional metadata fro
 ```bash
 node scripts/looppilot.mjs claude-project-summary
 ```
+
+## GitHub Issue URL Intake
+
+The recommended user flow stays inside the current agent session:
+
+```text
+/should-loop https://github.com/owner/repo/issues/123
+```
+
+```text
+Use LoopPilot on https://github.com/owner/repo/issues/123
+```
+
+Claude Code and Codex wrappers treat the issue URL as an input source, call the installed read-only helper with `--json` when available, and then use their own AI capability plus the shared LoopPilot core to decide `NO_GO`, `PLAN_ONLY`, or `RUN_WITH_CONTRACT`.
+
+The helper reads only the single issue title, body, labels, state, author, timestamps, URL, and comments count. It does not read comments, linked pull requests, attachments, logs, timeline events, or issue lists. If the issue has comments, a comment anchor URL, a truncated body, or obvious external-context references, it marks the packet as `possibly_incomplete` so the current agent defaults to `PLAN_ONLY` unless the user explicitly confirms continuing with incomplete context or approves reading more context.
+
+Advanced/debug use:
+
+```bash
+node .looppilot/scripts/issue-intake.mjs --url https://github.com/owner/repo/issues/123
+node scripts/looppilot.mjs issue-intake --url https://github.com/owner/repo/issues/123 --json
+```
+
+Public issues do not require a token. Private repositories or rate-limit-sensitive use can provide `GITHUB_TOKEN`, falling back to `GH_TOKEN`. Tokens are only sent to GitHub and are not printed, saved, or written to artifacts.
 
 ## Explicit Export Fallback
 
@@ -189,7 +222,7 @@ All explicit save commands use duplicate protection, support `--force` to overwr
 npm test
 ```
 
-This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, Ajv cross-checks, schema drift, safety negative probes, wrappers, wrapper parity, scan helper output, scan secret-safety, host capability helper shape and secret-safety, Claude project summary secret-safety, export templates, manual artifact templates, review-gate template, fixture coverage taxonomy, export command behavior, explicit save commands, package contents, docs consistency, CLI argument handling, and install/doctor integration satisfy the current safety gates.
+This validates the 45 decision fixtures and confirms that runtime JSON Schema checks, Ajv cross-checks, schema drift, safety negative probes, wrappers, wrapper parity, scan helper output, scan secret-safety, host capability helper shape and secret-safety, Claude project summary secret-safety, GitHub issue intake safety, export templates, manual artifact templates, review-gate template, fixture coverage taxonomy, export command behavior, explicit save commands, package contents, docs consistency, CLI argument handling, and install/doctor integration satisfy the current safety gates.
 
 ## Optional Wrapper Output Parity Eval
 

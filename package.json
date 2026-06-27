@@ -1,6 +1,6 @@
 {
   "name": "@looppilot/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
   "description": "Agent-native loop qualification pack for Codex and Claude Code.",
@@ -30,6 +30,7 @@
     "validate:package-contents": "node scripts/validate-package-contents.mjs",
     "validate:docs-consistency": "node scripts/validate-docs-consistency.mjs",
     "validate:claude-project-summary": "node scripts/validate-claude-project-summary.mjs",
+    "validate:issue-intake": "node scripts/validate-issue-intake.mjs",
     "host-capabilities": "node scripts/looppilot.mjs host-capabilities",
     "validate:host-capabilities": "node scripts/validate-host-capability-summary.mjs",
     "eval:wrapper-parity": "node scripts/eval-wrapper-parity.mjs",

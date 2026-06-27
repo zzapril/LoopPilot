@@ -103,6 +103,7 @@ MVP does not include:
 - CLI-first product surface
 - scheduled runner
 - GitHub issue queue
+- automatic GitHub issue scanning or execution
 - model provider registry
 - external Python/bash loop runner
 - durable orchestration
@@ -166,6 +167,7 @@ LoopPilot v0 should ship as a repo-local Agent Pack:
 | Claude Code wrapper | `.claude/skills/looppilot/SKILL.md` | Claude Code native invocation |
 | Claude command alias | `.claude/commands/should-loop.md` | Optional alias that references the Claude skill; no duplicated logic |
 | Scan helper | `.looppilot/scripts/scan-summary.*` | Optional read-only evidence summary |
+| Issue intake helper | `.looppilot/scripts/issue-intake.mjs` | Optional read-only single GitHub issue packet for the current agent |
 
 Wrappers must not duplicate the decision logic. They should import or reference the same shared core text. If wrappers diverge, the product becomes unsafe because the same task may receive different decisions in different agents.
 
@@ -599,6 +601,8 @@ looppilot doctor --target both --json
 looppilot scan
 looppilot host-capabilities
 looppilot claude-project-summary
+looppilot issue-intake --url https://github.com/owner/repo/issues/123
+looppilot issue-intake --repo owner/repo --number 123
 looppilot export --target codex
 looppilot export --target claude
 looppilot export --target github-issue
@@ -611,6 +615,15 @@ looppilot save-run-log --from /path/to/run-log.md
 ```
 
 No MVP command should be named `run`, because execution belongs to the current agent. A `check` command is also not part of the current release-ready surface; decision execution remains agent-native through Codex and Claude Code wrappers.
+
+`issue-intake` is an internal helper/debug surface, not the primary UX. The primary UX remains:
+
+```text
+Claude Code: /should-loop https://github.com/owner/repo/issues/123
+Codex: Use LoopPilot on https://github.com/owner/repo/issues/123
+```
+
+The helper reads only one issue endpoint, redacts obvious secrets, marks `possibly_incomplete` when comments, comment anchors, truncation, or issue text suggest omitted context may matter, and leaves all semantic judgment to the current Codex or Claude Code session.
 
 ---
 

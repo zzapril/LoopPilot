@@ -13,6 +13,7 @@ Last updated: 2026-06-27
 - [x] Fixture coverage report for decision distribution, high-risk keyword coverage, and taxonomy coverage.
 - [x] Optional read-only repo scan helper with sensitive path reporting and no secret content reads.
 - [x] Optional read-only host capability and Claude project summary helpers.
+- [x] Agent-native GitHub issue URL intake for Claude Code and Codex, backed by read-only `.looppilot/scripts/issue-intake.mjs` and debug `looppilot issue-intake`.
 - [x] Explicit export fallback templates and `looppilot export` command.
 - [x] Export command integration validation for all targets, dry-run, explicit output, duplicate protection, and force overwrite.
 - [x] Report and review-gate templates plus explicit `save-contract`, `save-report`, and `save-review-gate` commands for user-requested latest files.
@@ -31,11 +32,13 @@ Last updated: 2026-06-27
 
 - [x] Install/doctor integration validation in a temporary project.
 - [x] `0.1.0` published to npm as `@looppilot/cli`.
+- [x] `0.2.0` release-ready locally with GitHub issue intake; not published without separate approval.
 - [x] Final local verification, GitHub Actions CI, registry verification, npx install/doctor, and Claude Code smoke test passed.
 
 ## Notes
 
 - v0 remains chat-first and agent-native.
+- v0.2 issue intake remains agent-native: users paste issue URLs into Claude Code or Codex, while LoopPilot only reads and packages a single issue as untrusted context.
 - File writes are explicit-save or explicit-export only; v1 manual artifacts are not automatic runner state.
 - `RUN_WITH_CONTRACT` requires known host capabilities, objective gate, bounded rounds, stop conditions, and forbidden actions.
-- LoopPilot still does not implement a runner, provider registry, scheduler, deployer, or automatic commit/push flow.
+- LoopPilot still does not implement a runner, provider registry, scheduler, GitHub issue queue, deployer, or automatic commit/push flow.

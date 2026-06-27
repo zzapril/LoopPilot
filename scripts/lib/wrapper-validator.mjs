@@ -16,6 +16,16 @@ const requiredFilePolicyRefs = [
   ".looppilot/RUN_LOG.md",
 ];
 
+const requiredIssueIntakeRefs = [
+  "GitHub issue URL",
+  ".looppilot/scripts/issue-intake.mjs",
+  "looppilot issue-intake",
+  "--json",
+  "untrusted context",
+  "possibly_incomplete",
+  "explicitly confirms",
+];
+
 const wrapperSpecs = [
   {
     path: ".agents/skills/looppilot/SKILL.md",
@@ -66,6 +76,12 @@ export function validateWrappers(root = process.cwd()) {
         errors.push(`${wrapper.path}: missing explicit file policy reference ${ref}`);
       }
     }
+
+    for (const ref of requiredIssueIntakeRefs) {
+      if (!text.includes(ref)) {
+        errors.push(`${wrapper.path}: missing issue intake reference ${ref}`);
+      }
+    }
   }
 
   const coreRulesText = readIfExists(root, ".looppilot/core/qualification-rules.md", errors);
@@ -84,6 +100,14 @@ export function validateWrappers(root = process.cwd()) {
     }
     if (!commandText.includes("must not duplicate")) {
       errors.push(".claude/commands/should-loop.md: must forbid duplicated rules");
+    }
+    if (!commandText.includes("$ARGUMENTS")) {
+      errors.push(".claude/commands/should-loop.md: must pass slash command arguments with $ARGUMENTS");
+    }
+    for (const ref of requiredIssueIntakeRefs) {
+      if (!commandText.includes(ref)) {
+        errors.push(`.claude/commands/should-loop.md: missing issue intake reference ${ref}`);
+      }
     }
   }
 

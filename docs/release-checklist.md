@@ -1,6 +1,6 @@
 # Release Checklist
 
-Use this checklist to audit the `@looppilot/cli@0.1.0` npm release.
+Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
 Current status: `0.1.0` was published to npm on `2026-06-27T13:41:56.460Z`.
 
@@ -8,14 +8,17 @@ Current status: `0.1.0` was published to npm on `2026-06-27T13:41:56.460Z`.
 - Dist tag: `latest`
 - Shasum: `611c591fa361bf9a1bb4209fd028b8e842eb017a`
 
+Current repository status: `0.2.0` is release-ready code for agent-native GitHub issue URL intake. It is not published in this change; `npm publish` requires separate explicit approval.
+
 ## Package Readiness
 
 - [x] Confirm the package should be published publicly as `@looppilot/cli`.
 - [x] Confirm `package.json` has `"private": false`, `"license": "MIT"`, repository metadata, and public scoped-package publish config.
-- [x] Confirm `package.json` version is `0.1.0`.
+- [x] Confirm `package.json` version is `0.2.0`.
 - [x] Confirm the `files` whitelist contains only source, wrapper, core, fixture, script, docs, README, and license files needed by users.
 - [x] Confirm no secrets, credentials, local-only files, generated handoff exports, latest files, or generated v1 artifacts are intended for the package.
 - [x] Confirm the README install instructions match the package name and CLI behavior.
+- [x] Confirm `.looppilot/scripts/issue-intake.mjs` is included so installed agent wrappers can call the helper locally.
 
 ## Validation
 
@@ -30,10 +33,11 @@ Current status: `0.1.0` was published to npm on `2026-06-27T13:41:56.460Z`.
 - [x] Confirm generated `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md` are not present in the package contents.
 - [x] Confirm uppercase v1 templates and helper scripts are present in the package contents.
 - [x] Confirm release docs are present so README links and docs consistency validation remain self-contained.
+- [x] Confirm GitHub issue intake tests cover mock API success, auth headers, PR rejection, readable HTTP errors, redaction, truncation, incomplete-context warnings, output modes, and no heavy endpoint calls.
 - [x] Run `git diff --check` and confirm no whitespace errors.
 - [x] Confirm GitHub Actions CI mirrors the local release gate for tests, wrapper parity, doctor, package dry-run, and whitespace checks.
 
-## Publish Record
+## 0.1.0 Publish Record
 
 - [x] Do not run `npm publish` until the package contents review has been completed and approved.
 - [x] After push, confirm the GitHub Actions CI run passes on `main`.
@@ -45,3 +49,9 @@ Current status: `0.1.0` was published to npm on `2026-06-27T13:41:56.460Z`.
 - [x] Verify `npx @looppilot/cli@0.1.0 --help` runs from a clean temporary directory.
 - [x] Verify published-package Claude install and doctor pass from a clean temporary directory.
 - [x] Smoke-test Claude Code `/should-loop` against the published package without editing files, running commands, or saving artifacts.
+
+## 0.2.0 Publish Boundary
+
+- [x] Do not run `npm publish` for `0.2.0` in this change.
+- [x] Keep `0.1.0` recorded as the latest published npm version until a separate publish approval is given.
+- [x] Before any future `0.2.0` publish, rerun the full validation section and confirm the package tarball includes `.looppilot/scripts/issue-intake.mjs`, wrapper updates, docs, and `scripts/validate-issue-intake.mjs`.

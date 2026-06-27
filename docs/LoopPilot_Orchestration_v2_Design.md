@@ -2,20 +2,20 @@
 
 **Version**: v2 design draft  
 **Date**: 2026-06-26  
-**Status**: Draft for review; not approved for implementation  
-**Scope**: Define the allowed orchestration surface for a future LoopPilot v2 without changing the v0/v0.2 rule that LoopPilot is not an autonomous runner.
+**Status**: Single GitHub issue intake approved and implemented; other orchestration remains draft
+**Scope**: Define the allowed orchestration surface for LoopPilot v2 without changing the v0/v0.2 rule that LoopPilot is not an autonomous runner.
 
 ---
 
 ## 1. Purpose
 
-LoopPilot v2 may add lightweight orchestration around the existing agent-native loop qualification workflow. This document defines that boundary before any orchestration code is written.
+LoopPilot v2 currently adds one narrow orchestration aid around the existing agent-native loop qualification workflow: read-only single GitHub issue intake. This document defines that boundary before any additional orchestration code is written.
 
 The core product remains unchanged:
 
 > LoopPilot decides whether a task should loop, produces a bounded loop contract when safe, and hands execution to a human-supervised agent session.
 
-v2 orchestration is allowed to improve intake, reminders, and handoff. It is not allowed to turn LoopPilot into an autonomous deployment, merge, or unbounded execution system.
+v2 orchestration is allowed to improve narrow intake only in `0.2.0`. It is not allowed to turn LoopPilot into an autonomous deployment, merge, queue, scheduler, hook system, or unbounded execution system.
 
 ---
 
@@ -81,77 +81,49 @@ Allowed alternative:
 
 ---
 
-## 3. Allowed v2 integrations
+## 3. Approved v2 integration
 
-v2 integrations are orchestration aids only. They may create structured inputs, reminders, and handoff artifacts, but they must not execute code changes, merge changes, or deploy systems without a human-supervised agent session and an approved contract.
+The only approved v2 integration in `0.2.0` is single GitHub issue intake. It creates structured read-only input for the current Codex or Claude Code session; it must not execute code changes, merge changes, deploy systems, or mutate GitHub state.
 
 ### 3.1 GitHub issue intake
 
-LoopPilot v2 may ingest GitHub issue content to create a loop qualification request.
+LoopPilot v2 may ingest one explicitly specified GitHub issue to create a read-only intake packet for the current Codex or Claude Code session.
 
 Allowed behavior:
 
-- Read issue title, body, labels, linked pull requests, and relevant comments.
-- Convert issue text into a proposed LoopPilot decision request.
-- Attach read-only repository context when available.
-- Classify the request as `RUN_WITH_CONTRACT`, `PLAN_ONLY`, or `NO_GO` using the shared core rules.
-- Produce a draft contract or safe alternative for human review.
-- Post or save a draft response only when explicitly configured and approved.
+- Read only issue title, body, labels, state, author, timestamps, URL, and comments count from `GET /repos/{owner}/{repo}/issues/{issue_number}`.
+- Convert the issue into a structured intake packet and handoff prompt for the current agent session.
+- Mark the packet as `possibly_incomplete` when comments exist, the URL references a comment anchor, the body is truncated, or issue title/body text references omitted context.
+- Let Codex or Claude Code classify the request as `RUN_WITH_CONTRACT`, `PLAN_ONLY`, or `NO_GO` using the shared core rules.
+- Produce a draft contract or safe alternative only through the current agent's normal LoopPilot workflow.
 
 Not allowed:
 
 - Automatically claiming issues as executable work.
 - Automatically editing code from issue intake alone.
 - Automatically closing issues.
+- Automatically scanning issue lists, queues, labels, milestones, assignees, projects, or search queries.
+- Reading comments, linked pull requests, attachments, logs, or timeline events in the first version.
 - Automatically opening pull requests unless a human-supervised agent session has executed an approved contract and the user explicitly asks for that output.
+- Posting draft responses to GitHub.
 - Treating issue labels as sufficient permission to bypass risk checks.
 
 Required gate:
 
-- A human must approve the generated contract before execution begins.
+- The current agent must apply the shared core rules and render a valid decision before execution begins.
+- If the intake packet is `possibly_incomplete`, the agent must explain the missing-context risk and return `PLAN_ONLY` unless the user explicitly confirms continuing with incomplete context or approves reading omitted context.
 
-### 3.2 Scheduled review reminder
+### 3.2 Deferred surfaces not authorized in 0.2.0
 
-LoopPilot v2 may remind a human to review a stale contract, pending decision, or completed report.
+These surfaces remain out of scope until a separate design is approved:
 
-Allowed behavior:
+- scheduled review reminders or scheduled loops;
+- manual approval storage beyond existing agent confirmation;
+- Claude permission hooks;
+- webhooks, issue-label triggers, CI-triggered execution, or queue workers;
+- `looppilot run` or any runner-like command.
 
-- Send a scheduled reminder that a decision, contract, report, or pull request needs review.
-- Include current status, last known gate result, risks, and requested human action.
-- Stop after a configured number of reminders.
-
-Not allowed:
-
-- Starting a new execution loop because a reminder fired.
-- Re-running tests or commands on a schedule without a human-supervised contract.
-- Escalating from reminder to merge, deploy, or code edit.
-- Creating an infinite notification loop.
-
-Required gate:
-
-- The reminder must ask for human action; it must not perform the action itself.
-
-### 3.3 Manual approval handoff
-
-LoopPilot v2 may create explicit handoff artifacts for a human approver.
-
-Allowed behavior:
-
-- Generate an approval checklist.
-- Summarize scope, risks, files touched, verification gates, and stop conditions.
-- Capture an approval decision as input to a subsequent human-supervised agent session.
-- Record who/what approved the next bounded step when the host environment provides that information.
-
-Not allowed:
-
-- Inferring approval from silence.
-- Treating a successful test run as approval.
-- Treating issue assignment, label changes, or CI success as approval to merge/deploy.
-- Expanding contract scope after approval without a new approval.
-
-Required gate:
-
-- Approval must be explicit, attributable when possible, and tied to a specific contract version.
+Future work in these areas must ship with its own threat model, fixtures, validators, and documentation. It must not be added as a side effect of issue intake.
 
 ---
 
@@ -224,23 +196,19 @@ LoopPilot v2 permissions are capability-scoped. A workflow receives only the min
 
 ### 5.3 Integration permission constraints
 
-GitHub issue intake may use read permissions to prepare a decision request, but it may not use issue access as write or execution permission.
-
-Scheduled review reminders may use scheduling and notification permissions, but they may not use the scheduler as execution permission.
-
-Manual approval handoff may record approval state, but approval is valid only for the named contract, scope, gate, and time/round budget.
+GitHub issue intake may use read permissions to prepare a decision request, but it may not use issue access as write or execution permission. No scheduler, hook, queue, or approval-store permission is authorized in `0.2.0`.
 
 ---
 
 ## 6. Implementation sequencing
 
-Before writing v2 orchestration code, the project must review and approve this design or a successor design that preserves the boundaries in this document.
+Single GitHub issue intake is the only reviewed and approved v2 code path in `0.2.0`. Before writing any additional v2 orchestration code, the project must review and approve this design or a successor design that preserves the boundaries in this document.
 
 Required order:
 
 1. Review and approve the v2 orchestration design.
 2. Update shared qualification rules and fixtures for the approved integration boundaries.
-3. Add schema fields only if needed for issue intake, reminders, or approval handoff.
+3. Add schema fields only if needed for the approved integration.
 4. Implement read-only/draft behavior first.
 5. Add tests for risk escalation, permission denial, and bounded stop behavior.
 6. Only then consider human-supervised execution handoff improvements.

@@ -19,15 +19,15 @@
 - 已有 Codex 与 Claude Code wrapper，并且 wrapper 明确引用共享 core，不复制规则。
 - 已有 Claude Code command alias。
 - 已有 fixture validator、wrapper validator、统一 test 命令。
-- 已有一个轻量 CLI/脚本层，支持 `install`、`doctor`、`scan`、`host-capabilities`、`claude-project-summary`、显式 `export` 与显式 `save-*`，用于安装/检查 Agent Pack、生成只读证据摘要、导出 handoff 和保存用户明确要求的 artifacts。
-- 已有 runtime JSON Schema、Ajv cross-check、schema drift、wrapper parity、golden wrapper parity eval、scan output、scan secret-safety、host/Claude helper、export template、fixture coverage taxonomy、export command、save command、manual template、review-gate template、package contents、docs consistency、CLI args、install/doctor integration 验证。
+- 已有一个轻量 CLI/脚本层，支持 `install`、`doctor`、`scan`、`host-capabilities`、`claude-project-summary`、`issue-intake`、显式 `export` 与显式 `save-*`，用于安装/检查 Agent Pack、生成只读证据摘要、读取单个 GitHub issue、导出 handoff 和保存用户明确要求的 artifacts。
+- 已有 runtime JSON Schema、Ajv cross-check、schema drift、wrapper parity、golden wrapper parity eval、scan output、scan secret-safety、host/Claude helper、issue-intake、export template、fixture coverage taxonomy、export command、save command、manual template、review-gate template、package contents、docs consistency、CLI args、install/doctor integration 验证。
 
 当前仍需注意的边界：
 
 - Schema 校验当前采用本地 runtime JSON Schema evaluator + Ajv cross-check + schema drift + safety validator 组合实现；即使不接外部 provider，也能在本仓库内验证 fixtures 与 schema 兼容性。
 - Export fallback 已提供模板和显式 `looppilot export` 命令，但仍只是 handoff，不是受控执行。
 - Scan helper 已实现只读摘要，但不参与自动 decision；它只是给当前 agent 提供可选证据。
-- LoopPilot 仍然不做 runner、provider registry、scheduler、自动 commit/push/deploy。
+- LoopPilot 仍然不做 runner、provider registry、scheduler、GitHub issue queue、自动 commit/push/deploy。
 
 ---
 
@@ -50,9 +50,10 @@
 | 不做 runner/provider | MVP 不实现 runner，不接 provider | 当前符合 | 没有后台 runner / provider registry | v0 完成 |
 | Install / doctor | 技术设计未强制，但可作为分发辅助 | 已完成 | `scripts/looppilot.mjs` 支持 install/doctor | 超出 v0，正向补充 |
 | Repo scan helper | v0.1：只读 scan summary | 已完成 | `.looppilot/scripts/scan-summary.mjs` 与 `scripts/validate-scan-summary.mjs` | v0.1 完成 |
+| GitHub issue URL intake | v0.2：Claude/Codex 当前会话内读取单个 issue 并交给 agent 判断 | 已完成 | `.looppilot/scripts/issue-intake.mjs`、`looppilot issue-intake`、wrapper 更新与 `scripts/validate-issue-intake.mjs` | v0.2 完成 |
 | Export fallback | v0.2：生成 Codex/Claude/GitHub issue handoff | 已完成 | `.looppilot/core/export-template-*.md` 与 `looppilot export` | v0.2 完成 |
 | Latest/review/manual artifact 保存 | 仅用户明确要求时保存 | 已完成 | `save-contract`、`save-report`、`save-review-gate`、`save-vision`、`save-state`、`save-run-log` 均要求 `--from`，默认 duplicate protection | v1 手工 artifact 策略完成 |
-| Safety tests | 覆盖 payment/auth/deploy/secrets/unknown host 等 | 已增强 | `npm test` 覆盖 fixtures、schema、Ajv、wrapper、parity、scan、host/Claude helper、export、coverage、manual templates、review gate、package contents、docs consistency、CLI args、install/doctor | 持续增强 |
+| Safety tests | 覆盖 payment/auth/deploy/secrets/unknown host 等 | 已增强 | `npm test` 覆盖 fixtures、schema、Ajv、wrapper、parity、scan、host/Claude helper、issue-intake、export、coverage、manual templates、review gate、package contents、docs consistency、CLI args、install/doctor | 持续增强 |
 
 ---
 
@@ -138,6 +139,7 @@ scripts/validate-scan-summary.mjs
 scripts/validate-scan-security.mjs
 scripts/validate-host-capability-summary.mjs
 scripts/validate-claude-project-summary.mjs
+scripts/validate-issue-intake.mjs
 scripts/validate-exports.mjs
 scripts/report-fixture-coverage.mjs
 scripts/validate-export-command.mjs
@@ -164,6 +166,7 @@ scripts/looppilot.mjs
 - `validate-wrapper-parity.mjs` 检查 Codex / Claude wrapper workflow 和 guardrails 是否同构。
 - `validate-scan-summary.mjs` 与 `validate-scan-security.mjs` 分别检查 scan JSON shape 和敏感路径只报告不泄露内容。
 - `validate-exports.mjs` 检查 export/report 模板安全声明。
+- `validate-issue-intake.mjs` 使用 mock GitHub API 检查单 issue 读取、token header、PR rejection、错误提示、redaction、truncation、`possibly_incomplete` 和不调用 heavy endpoints。
 - `report-fixture-coverage.mjs` 统计 decision 分布、风险关键词覆盖、细分 taxonomy 覆盖，并防止高风险 fixture 进入 `RUN_WITH_CONTRACT`。
 - `validate-export-command.mjs` 检查全部 export targets 的 dry-run、显式 output、duplicate protection 和 `--force`。
 - `validate-save-commands.mjs` 检查 `save-contract` / `save-report` / `save-review-gate` / `save-vision` / `save-state` / `save-run-log` 必须显式 `--from`，默认路径正确，duplicate 需 `--force`，`--dry-run` 不写文件。
@@ -172,7 +175,7 @@ scripts/looppilot.mjs
 - `validate-package-contents.mjs` 检查 packed package contents 包含 core/templates/helpers/docs/progress notes，且不包含 `.looppilot/exports/`、`.looppilot/latest-*` 或生成的 v1 artifacts；随后本地安装 packed tarball，并 smoke test `looppilot --help`、`doctor --json`、`install --dry-run` 和 bin shim。
 - `validate-docs-consistency.mjs` 检查 README 与全部 `docs/*.md` 不回退到旧小写 artifact、旧 Ajv/parity 说法或未实现的 `looppilot check` 示例。
 - `validate-install-command.mjs` 在临时项目中验证 install 后 doctor --json 可通过，并确认 project-root `--cwd` 不会把不存在的目录当成有效项目。
-- `looppilot.mjs` 支持 `install`、增强 `doctor`、`scan`、`host-capabilities`、`claude-project-summary`、显式 `export` 和显式 `save-*`。
+- `looppilot.mjs` 支持 `install`、增强 `doctor`、`scan`、`host-capabilities`、`claude-project-summary`、`issue-intake`、显式 `export` 和显式 `save-*`。
 
 评估：
 
@@ -235,7 +238,27 @@ scan helper 输出：
 - scan helper 不读取 `.env`、`.env.*`、`*.pem`、`*.key`、`secrets/**`、`.ssh/**`、`.aws/**` 的内容。
 - scan 结果只是可选证据，不能让未知 host capability 自动进入 `RUN_WITH_CONTRACT`。
 
-### 4.4 Export fallback
+### 4.4 GitHub issue URL intake
+
+已新增：
+
+- `.looppilot/scripts/issue-intake.mjs`
+- `looppilot issue-intake --url <github-issue-url>`
+- `looppilot issue-intake --repo owner/name --number <issue-number>`
+- Claude `/should-loop <issue-url>` wrapper flow
+- Codex `Use LoopPilot on <issue-url>` wrapper flow
+- `scripts/validate-issue-intake.mjs`
+
+安全边界：
+
+- issue intake 是当前 agent 会话里的输入来源，不是独立 runner。
+- helper 只读取单个 GitHub issue endpoint：title、body、labels、state、author、timestamps、URL 和 comments count。
+- helper 不读 comments、linked pull requests、attachments、logs、timeline，也不扫描 issue 列表。
+- helper 不总结、不分类、不生成最终 contract；最终 `NO_GO` / `PLAN_ONLY` / `RUN_WITH_CONTRACT` 仍由 Codex / Claude Code 当前会话使用 shared core 判断。
+- issue body 被视为不可信输入；helper 会做明显 token/secret redaction，并在有评论、URL 指向评论、body 被截断或 issue 文本引用外部上下文时标记 `possibly_incomplete`。
+- helper 不写 GitHub，不 comment、不 close issue、不创建 branch/PR、不 push/deploy。
+
+### 4.5 Export fallback
 
 已新增：
 
@@ -251,7 +274,7 @@ scan helper 输出：
 - export 文件明确说明它只是 handoff，不是 controlled execution。
 - 接收 agent 必须重新读取 shared core、输出 schema-valid JSON、展示 contract，并遵守 no commit/push/deploy 等规则。
 
-### 4.5 Report template
+### 4.6 Report template
 
 已新增：
 
@@ -482,7 +505,7 @@ node scripts/looppilot.mjs install --target both --scope project --dry-run
 
 1. `looppilot run` 或任何后台 runner。
 2. 接入 OpenAI/Anthropic provider registry。
-3. GitHub issue queue、scheduler、长期状态机。
+3. GitHub issue queue、scheduler、长期状态机；单个 issue 的只读 intake 已完成，不应扩展成自动队列。
 4. 自动 commit / push / deploy。
 
 原因：这些都被 PRD/TDD 明确排除在 MVP 之外，会把产品从 agent-native loop-check 拉偏成 runner/orchestrator。
@@ -517,6 +540,11 @@ node scripts/looppilot.mjs install --target both --scope project --dry-run
 - [x] Codex export handoff 模板存在。
 - [x] Claude export handoff 模板存在。
 - [x] GitHub issue handoff 模板存在。
+- [x] GitHub issue URL intake helper 存在，并安装为 `.looppilot/scripts/issue-intake.mjs`。
+- [x] Claude Code `/should-loop <issue-url>` 和 Codex skill issue URL flow 已记录。
+- [x] issue-intake 只读取单个 issue，不读 comments、linked PR、attachments、logs、timeline 或 issue queue。
+- [x] issue-intake 对明显 secret/token 做 redaction，对超长 body 做 truncation，并在有评论、URL 指向评论、body 被截断或 issue 文本引用外部上下文时标记 `possibly_incomplete`。
+- [x] issue-intake validator 使用 mock GitHub API，覆盖 auth、PR rejection、HTTP errors、output modes 和 no heavy endpoint calls。
 - [x] export 必须显式触发。
 - [x] export 文件明确说明不是受控执行。
 - [x] export validator 纳入 `npm test`。
@@ -562,15 +590,14 @@ eval:wrapper-parity:
 
 doctor --target both --json:
 - ok: true
-- package: @looppilot/cli@0.1.0
-- installedFileCount: 18
+- package: @looppilot/cli@0.2.0
+- installedFileCount: 19
 - missingFileCount: 0
 - core files include uppercase v1 templates and helper scripts.
 
 npm pack --dry-run:
-- Package version: 0.1.0
-- total files: 57
-- includes uppercase v1 templates, helper scripts, and docs/progress notes.
+- Package version: 0.2.0
+- includes uppercase v1 templates, issue-intake helper scripts, and docs/progress notes.
 - excludes generated `.looppilot/exports/`, `.looppilot/latest-*`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md`.
 
 git diff --check:
@@ -581,4 +608,4 @@ git diff --check:
 
 ## 9. 一句话方案
 
-**当前已补齐本地 runtime JSON Schema validation、Ajv cross-check、schema drift、wrapper parity、golden wrapper parity eval、fixture coverage taxonomy、只读且报告敏感路径的 scan helper、scan secret-safety、host/Claude helper、显式 export fallback、显式 save commands、manual artifact templates、review-gate template、package contents validation、docs consistency validation、install/doctor integration 与 release-ready `0.1.0` 元数据；后续重点是保持安全门禁稳定，并继续坚持 agent-native、chat-first、no runner、no provider、no automatic commit/push/deploy。**
+**当前已补齐本地 runtime JSON Schema validation、Ajv cross-check、schema drift、wrapper parity、golden wrapper parity eval、fixture coverage taxonomy、只读且报告敏感路径的 scan helper、scan secret-safety、host/Claude helper、agent-native GitHub issue URL intake、显式 export fallback、显式 save commands、manual artifact templates、review-gate template、package contents validation、docs consistency validation、install/doctor integration 与 release-ready `0.2.0` 元数据；后续重点是保持安全门禁稳定，并继续坚持 agent-native、chat-first、no runner、no provider、no GitHub issue queue、no automatic commit/push/deploy。**

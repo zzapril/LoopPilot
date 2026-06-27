@@ -2,20 +2,28 @@
 
 Short, task-oriented setup for using LoopPilot as an agent-native loop qualification pack.
 
-Current published version: `@looppilot/cli@0.1.0`.
+Current repository version: `@looppilot/cli@0.2.0`.
+
+Latest published npm version: `@looppilot/cli@0.1.0`. The `0.2.0` GitHub issue intake flow is release-ready in this repository and should be published only after separate approval.
 
 ## 1. Install
 
-Install the published CLI in a project:
+Until `0.2.0` is published to npm, install from this repository checkout when you want GitHub issue intake:
 
 ```bash
-npx @looppilot/cli install --target both --scope project
+node scripts/looppilot.mjs install --target both --scope project --cwd /path/to/your/project
 ```
 
-For Claude Code only:
+After `0.2.0` is published, install the published CLI with an explicit version:
 
 ```bash
-npx @looppilot/cli install --target claude --scope project
+npx @looppilot/cli@0.2.0 install --target both --scope project
+```
+
+For Claude Code only after publish:
+
+```bash
+npx @looppilot/cli@0.2.0 install --target claude --scope project
 ```
 
 ## 2. Run Doctor
@@ -23,9 +31,11 @@ npx @looppilot/cli install --target claude --scope project
 Verify the installed Codex and Claude Code files:
 
 ```bash
-npx @looppilot/cli doctor --target both
-npx @looppilot/cli doctor --target both --json
+node scripts/looppilot.mjs doctor --target both --cwd /path/to/your/project
+node scripts/looppilot.mjs doctor --target both --cwd /path/to/your/project --json
 ```
+
+After `0.2.0` is published, the equivalent published-package commands are `npx @looppilot/cli@0.2.0 doctor --target both` and `npx @looppilot/cli@0.2.0 doctor --target both --json`.
 
 Doctor checks installed files, fixture/schema compatibility, wrapper references, wrapper parity, and installed file hashes. It does not run a loop.
 
@@ -39,6 +49,12 @@ Example:
 Use the LoopPilot skill to decide whether this task should run as a bounded loop: fix lint errors until npm test passes.
 ```
 
+GitHub issue URL example:
+
+```text
+Use LoopPilot on https://github.com/owner/repo/issues/123
+```
+
 ## 4. Use The Claude Code Command
 
 In Claude Code, use the command alias:
@@ -47,7 +63,15 @@ In Claude Code, use the command alias:
 /should-loop fix lint errors until npm test passes
 ```
 
-The alias delegates to the Claude LoopPilot skill; it does not duplicate the shared rules.
+The alias passes your slash-command arguments to the Claude LoopPilot skill; it does not duplicate the shared rules.
+
+GitHub issue URL example:
+
+```text
+/should-loop https://github.com/owner/repo/issues/123
+```
+
+For issue URLs, the installed helper returns stable JSON to the current agent. It reads only the single issue title, body, labels, state, author, timestamps, URL, and comments count. It does not read comments, linked pull requests, attachments, logs, timeline events, or issue lists. If comments, a comment anchor URL, a truncated body, or issue text suggest omitted context, LoopPilot marks the packet as `possibly_incomplete` and the current agent defaults to `PLAN_ONLY` unless the user explicitly confirms continuing with incomplete context or approves reading more context.
 
 ## 5. Gather Read-Only Evidence
 
@@ -61,7 +85,18 @@ node scripts/looppilot.mjs claude-project-summary
 
 These helpers only summarize safe project or host facts. They do not read secret contents, do not install dependencies, and must not override LoopPilot's unknown-host guardrails.
 
-## 6. Save Explicit Artifacts
+## 6. Advanced Issue Intake Debug
+
+Most users should paste the issue URL into Codex or Claude Code instead of running this manually. For debugging, the read-only helper can render the exact packet that the agent receives:
+
+```bash
+node .looppilot/scripts/issue-intake.mjs --url https://github.com/owner/repo/issues/123
+node scripts/looppilot.mjs issue-intake --url https://github.com/owner/repo/issues/123 --json
+```
+
+Public issues do not require a token. For private repositories or higher rate limits, set `GITHUB_TOKEN` or `GH_TOKEN`; LoopPilot sends the token only to GitHub and never prints or saves it.
+
+## 7. Save Explicit Artifacts
 
 Save latest files only when explicitly requested by a human:
 
@@ -87,7 +122,7 @@ Default outputs:
 
 All save commands require `--from`, use duplicate protection by default, support `--force`, and support `--dry-run`.
 
-## 7. Export Handoff
+## 8. Export Handoff
 
 Create an explicit handoff file for another surface:
 

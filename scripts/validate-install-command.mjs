@@ -26,6 +26,7 @@ const expectedInstalledFiles = [
   ".looppilot/scripts/scan-summary.mjs",
   ".looppilot/scripts/claude-project-summary.mjs",
   ".looppilot/scripts/host-capability-summary.mjs",
+  ".looppilot/scripts/issue-intake.mjs",
   ".agents/skills/looppilot/SKILL.md",
   ".claude/skills/looppilot/SKILL.md",
   ".claude/commands/should-loop.md",
@@ -58,7 +59,7 @@ function assertDoctorMetadata(report, label) {
   if (!Array.isArray(metadata.wrapper_files) || metadata.wrapper_files.length !== 3) {
     errors.push(`${label} metadata wrapper_files mismatch`);
   }
-  if (!Array.isArray(metadata.core_files) || metadata.core_files.length !== 15) {
+  if (!Array.isArray(metadata.core_files) || metadata.core_files.length !== 16) {
     errors.push(`${label} metadata core_files mismatch`);
   }
   if (!Number.isInteger(metadata.duration_ms) || metadata.duration_ms < 0) {

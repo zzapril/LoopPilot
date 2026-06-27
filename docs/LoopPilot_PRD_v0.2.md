@@ -32,6 +32,7 @@ LoopPilot 不是：
 - 不是新的 coding agent。
 - 不是新的 agent runtime。
 - 不是 GitHub issue bot。
+- 不是自动扫描或自动执行 GitHub issue 的 queue。
 - 不是 scheduled loop 平台。
 - 不是自动部署、自动合并、自动发布工具。
 - 不替代 Codex / Claude Code / Cursor。
@@ -41,6 +42,7 @@ LoopPilot 是：
 - loop qualification：判断任务值不值得 loop。
 - loop contract：把目标、边界、验收、停止条件写清楚。
 - agent-native handoff：让当前 Codex 或 Claude Code session 直接执行。
+- single issue intake：用户显式贴一个 GitHub issue URL 时，只读读取该 issue 并交给当前 agent 判断。
 - export fallback：必要时导出给 GitHub issue 或其他 agent。
 
 一句话：
@@ -159,6 +161,7 @@ MVP 不做：
 - 不接独立 AI provider。
 - 不实现 scheduled loop。
 - 不实现 GitHub issue queue。
+- 只允许用户显式指定单个 GitHub issue 的只读 intake，不自动扫 issue。
 - 不自动 commit / push / merge / deploy。
 - 不做长期状态机。
 - 不把 export prompt 包装成受控执行。
@@ -482,6 +485,8 @@ MVP 质量指标：
 - 生成 `RUN_IN_CODEX.md`。
 - 生成 `RUN_IN_CLAUDE.md`。
 - 生成 `github-issue.md`。
+- 增加 agent-native GitHub issue URL intake：`/should-loop <issue-url>` 或 `Use LoopPilot on <issue-url>`。
+- issue intake 只读单个 issue，不读 comments / linked PR / attachments / logs，不自动执行。
 
 ### v1：Reusable loop artifacts
 
@@ -492,7 +497,7 @@ MVP 质量指标：
 
 ### v2：Orchestration integration
 
-- GitHub issue queue。
+- 更窄的 GitHub single issue intake 已进入 v0.2 release-ready；GitHub issue queue 仍不做。
 - scheduled loop。
 - Codex sandbox / approval 检测。
 - Claude Code hooks / permission 检测。

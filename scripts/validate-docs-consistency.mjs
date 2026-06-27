@@ -10,6 +10,7 @@ const requiredDocs = [
   "docs/LoopPilot_Implementation_Status_and_Plan_v0.2.md",
   "docs/release-checklist.md",
   "docs/release-notes-0.1.0.md",
+  "docs/release-notes-0.2.0.md",
 ];
 
 const discoveredDocs = fs.existsSync("docs")
@@ -44,6 +45,11 @@ const requiredFragmentsByFile = {
   "README.md": [
     "@looppilot/cli",
     "0.1.0",
+    "0.2.0",
+    "issue-intake",
+    ".looppilot/scripts/issue-intake.mjs",
+    "--cwd /path/to/your/project",
+    "possibly_incomplete",
     ".looppilot/latest-review-gate.md",
     ".looppilot/VISION.md",
     ".looppilot/STATE.md",
@@ -51,6 +57,9 @@ const requiredFragmentsByFile = {
   ],
   "IMPLEMENTATION_PROGRESS.md": [
     "0.1.0",
+    "0.2.0",
+    "issue-intake",
+    ".looppilot/scripts/issue-intake.mjs",
     ".looppilot/latest-review-gate.md",
     ".looppilot/VISION.md",
     ".looppilot/STATE.md",
@@ -58,6 +67,7 @@ const requiredFragmentsByFile = {
     "published to npm",
   ],
   "docs/LoopPilot_PRD_v0.2.md": [
+    "single issue intake",
     ".looppilot/latest-review-gate.md",
     ".looppilot/VISION.md",
     ".looppilot/STATE.md",
@@ -65,6 +75,8 @@ const requiredFragmentsByFile = {
     "save-vision",
   ],
   "docs/LoopPilot_Technical_Design_v0.2.md": [
+    "looppilot issue-intake",
+    "possibly_incomplete",
     ".looppilot/latest-review-gate.md",
     ".looppilot/VISION.md",
     ".looppilot/STATE.md",
@@ -75,6 +87,10 @@ const requiredFragmentsByFile = {
   ],
   "docs/LoopPilot_Quickstart.md": [
     "0.1.0",
+    "0.2.0",
+    "issue-intake",
+    "--cwd /path/to/your/project",
+    "possibly_incomplete",
     "save-review-gate",
     ".looppilot/VISION.md",
     ".looppilot/STATE.md",
@@ -88,6 +104,8 @@ const requiredFragmentsByFile = {
   ],
   "docs/release-checklist.md": [
     "0.1.0",
+    "0.2.0",
+    ".looppilot/scripts/issue-intake.mjs",
     "https://www.npmjs.com/package/@looppilot/cli",
     "611c591fa361bf9a1bb4209fd028b8e842eb017a",
     ".looppilot/VISION.md",
@@ -103,6 +121,14 @@ const requiredFragmentsByFile = {
     ".looppilot/STATE.md",
     ".looppilot/RUN_LOG.md",
     "Claude Code `2.1.168`",
+  ],
+  "docs/release-notes-0.2.0.md": [
+    "release-ready",
+    "@looppilot/cli@0.2.0",
+    "@looppilot/cli@0.1.0",
+    ".looppilot/scripts/issue-intake.mjs",
+    "possibly_incomplete",
+    "npm publish",
   ],
 };
 

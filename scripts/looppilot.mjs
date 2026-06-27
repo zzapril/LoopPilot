@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { runIssueIntake } from "../.looppilot/scripts/issue-intake.mjs";
 import { readJsonFile, readJsonlFile, validateFixtureSet } from "./lib/decision-validator.mjs";
 import { validateDecisionAgainstSchema, validateDecisionSchemaDefinition } from "./lib/schema-validator.mjs";
 import { validateWrappers } from "./lib/wrapper-validator.mjs";
@@ -27,6 +28,7 @@ const coreFiles = [
   ".looppilot/scripts/scan-summary.mjs",
   ".looppilot/scripts/claude-project-summary.mjs",
   ".looppilot/scripts/host-capability-summary.mjs",
+  ".looppilot/scripts/issue-intake.mjs",
 ];
 
 const codexFiles = [".agents/skills/looppilot/SKILL.md"];
@@ -48,6 +50,8 @@ Usage:
   looppilot install [--target both|codex|claude] [--scope project] [--cwd <path>] [--force] [--dry-run]
   looppilot doctor [--target both|codex|claude] [--cwd <path>] [--json] [--output <path>] [--force] [--dry-run]
   looppilot export --target codex|claude|github-issue [--cwd <path>] [--output <path>] [--force] [--dry-run]
+  looppilot issue-intake --url <github-issue-url> [--cwd <path>] [--json] [--output <path>] [--force] [--dry-run]
+  looppilot issue-intake --repo owner/name --number <issue-number> [--cwd <path>] [--json] [--output <path>] [--force] [--dry-run]
   looppilot save-contract --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-report --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
   looppilot save-vision --from <path> [--cwd <path>] [--output <path>] [--force] [--dry-run]
@@ -62,6 +66,7 @@ Notes:
   install copies the Agent Pack only. It does not run loops.
   doctor checks installed Agent Pack files, fixtures, and wrappers.
   export writes handoff files only when explicitly requested. It does not execute loops.
+  issue-intake is a read-only helper for agent-native GitHub issue URL handoff.
   save-* commands write manual artifacts only when explicitly requested.
   scan prints a read-only repository evidence summary.
   host-capabilities prints optional read-only host capability evidence.
@@ -82,6 +87,9 @@ function parseArgs(argv) {
     dryRun: false,
     output: null,
     from: null,
+    repo: null,
+    number: null,
+    url: null,
     json: false,
   };
 
@@ -119,6 +127,15 @@ function parseArgs(argv) {
     } else if (arg === "--from") {
       recordOption(arg);
       options.from = readOptionValue(arg, index++);
+    } else if (arg === "--repo") {
+      recordOption(arg);
+      options.repo = readOptionValue(arg, index++);
+    } else if (arg === "--number") {
+      recordOption(arg);
+      options.number = readOptionValue(arg, index++);
+    } else if (arg === "--url") {
+      recordOption(arg);
+      options.url = readOptionValue(arg, index++);
     } else if (arg === "--json") {
       recordOption(arg);
       options.json = true;
@@ -152,6 +169,7 @@ function validateCommandOptions(options) {
     ["install", new Set(["--target", "--scope", "--cwd", "--force", "--dry-run"])],
     ["doctor", new Set(["--target", "--cwd", "--json", "--output", "--force", "--dry-run"])],
     ["export", new Set(["--target", "--cwd", "--output", "--force", "--dry-run"])],
+    ["issue-intake", new Set(["--url", "--repo", "--number", "--cwd", "--json", "--output", "--force", "--dry-run"])],
     ["scan", new Set(["--cwd"])],
     ["host-capabilities", new Set(["--cwd"])],
     ["claude-project-summary", new Set(["--cwd"])],
@@ -177,6 +195,15 @@ function validateCommandOptions(options) {
     }
     if (options.dryRun && !options.output) {
       throw new Error("doctor --dry-run requires --output.");
+    }
+  }
+
+  if (options.command === "issue-intake") {
+    if (options.force && !options.output) {
+      throw new Error("issue-intake --force requires --output.");
+    }
+    if (options.dryRun && !options.output) {
+      throw new Error("issue-intake --dry-run requires --output.");
     }
   }
 }
@@ -488,6 +515,8 @@ try {
     doctor(options);
   } else if (options.command === "export") {
     exportHandoff(options);
+  } else if (options.command === "issue-intake") {
+    await runIssueIntake(options);
   } else if (options.command === "save-contract") {
     saveExplicitFile(options, "contract");
   } else if (options.command === "save-report") {
