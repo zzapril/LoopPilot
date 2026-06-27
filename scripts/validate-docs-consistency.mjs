@@ -33,6 +33,11 @@ const forbiddenFragments = [
   "返回 403",
   "静态 parity",
   "解包并 smoke test",
+  "not been published to npm",
+  "`npm publish` has not been run",
+  "npm publish` still requires npm authentication",
+  "Until the package is published",
+  "After human approval and npm publish",
 ];
 
 const requiredFragmentsByFile = {
@@ -50,7 +55,7 @@ const requiredFragmentsByFile = {
     ".looppilot/VISION.md",
     ".looppilot/STATE.md",
     ".looppilot/RUN_LOG.md",
-    "npm publish",
+    "published to npm",
   ],
   "docs/LoopPilot_PRD_v0.2.md": [
     ".looppilot/latest-review-gate.md",
@@ -83,16 +88,21 @@ const requiredFragmentsByFile = {
   ],
   "docs/release-checklist.md": [
     "0.1.0",
-    "`npm publish` has not been run",
+    "https://www.npmjs.com/package/@looppilot/cli",
+    "611c591fa361bf9a1bb4209fd028b8e842eb017a",
     ".looppilot/VISION.md",
     ".looppilot/STATE.md",
     ".looppilot/RUN_LOG.md",
+    "Smoke-test Claude Code `/should-loop`",
   ],
   "docs/release-notes-0.1.0.md": [
-    "not been published to npm",
+    "published to npm",
+    "https://www.npmjs.com/package/@looppilot/cli",
+    "611c591fa361bf9a1bb4209fd028b8e842eb017a",
     ".looppilot/VISION.md",
     ".looppilot/STATE.md",
     ".looppilot/RUN_LOG.md",
+    "Claude Code `2.1.168`",
   ],
 };
 

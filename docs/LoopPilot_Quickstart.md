@@ -2,18 +2,20 @@
 
 Short, task-oriented setup for using LoopPilot as an agent-native loop qualification pack.
 
+Current published version: `@looppilot/cli@0.1.0`.
+
 ## 1. Install
 
-Until the package is published, install from this repository during development:
-
-```bash
-node scripts/looppilot.mjs install --target both --scope project
-```
-
-The package is release-ready at `0.1.0`, but `npm publish` is intentionally not part of this step. After human approval and publish, the package interface is:
+Install the published CLI in a project:
 
 ```bash
 npx @looppilot/cli install --target both --scope project
+```
+
+For Claude Code only:
+
+```bash
+npx @looppilot/cli install --target claude --scope project
 ```
 
 ## 2. Run Doctor
@@ -21,8 +23,8 @@ npx @looppilot/cli install --target both --scope project
 Verify the installed Codex and Claude Code files:
 
 ```bash
-node scripts/looppilot.mjs doctor --target both
-node scripts/looppilot.mjs doctor --target both --json
+npx @looppilot/cli doctor --target both
+npx @looppilot/cli doctor --target both --json
 ```
 
 Doctor checks installed files, fixture/schema compatibility, wrapper references, wrapper parity, and installed file hashes. It does not run a loop.

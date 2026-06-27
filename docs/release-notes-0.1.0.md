@@ -1,6 +1,12 @@
 # LoopPilot 0.1.0 Release Notes
 
-Status: release-ready for local review. This version has not been published to npm.
+Status: published to npm.
+
+- Package: `@looppilot/cli@0.1.0`
+- npm URL: https://www.npmjs.com/package/@looppilot/cli
+- Published at: `2026-06-27T13:41:56.460Z`
+- Dist tag: `latest`
+- Shasum: `611c591fa361bf9a1bb4209fd028b8e842eb017a`
 
 ## Highlights
 
@@ -12,7 +18,7 @@ Status: release-ready for local review. This version has not been published to n
 
 ## Validation
 
-Release review should confirm these commands pass before publishing:
+Release review confirmed these commands passed before publishing:
 
 ```bash
 npm test
@@ -22,6 +28,13 @@ env npm_config_cache=/private/tmp/looppilot-npm-cache npm pack --dry-run
 git diff --check
 ```
 
-## Publish Hold
+Post-publish verification also confirmed:
 
-`npm publish` is intentionally not part of the automated validation flow. Publish only after a human reviews package contents and explicitly approves release.
+```bash
+npm view @looppilot/cli version
+npx @looppilot/cli@0.1.0 --help
+npx @looppilot/cli@0.1.0 install --target claude --scope project
+npx @looppilot/cli@0.1.0 doctor --target claude --json
+```
+
+Claude Code `2.1.168` was smoke-tested against the published package in a temporary project. The `/should-loop` command alias produced a LoopPilot decision and contract without editing files, running commands, or saving artifacts.

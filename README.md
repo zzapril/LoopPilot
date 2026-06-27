@@ -34,26 +34,26 @@ Not implemented by design:
 
 ## Install In A Project
 
-Until the package is published, install from this repository during development:
-
-```bash
-node scripts/looppilot.mjs install --target both --scope project
-```
-
-After human approval and npm publish, run the CLI with `npx` and choose the agent target and installation scope for your project:
+Install the published CLI with `npx` and choose the agent target and installation scope for your project:
 
 ```bash
 npx @looppilot/cli install --target both --scope project
 ```
 
-After publish, you can also install the package globally if you prefer a reusable local command:
+For Claude Code only:
+
+```bash
+npx @looppilot/cli install --target claude --scope project
+```
+
+You can also install the package globally if you prefer a reusable local command:
 
 ```bash
 npm install --global @looppilot/cli
 looppilot install --target both --scope project
 ```
 
-The published package name is `@looppilot/cli` and the first release-ready version is `0.1.0`. The package is intended to be publishable after release review, but it must not be published until the packaged contents have been reviewed and generated `.looppilot/exports/`, `.looppilot/latest-*`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md` files are confirmed absent.
+The published package name is `@looppilot/cli`. The first public version is `0.1.0`: https://www.npmjs.com/package/@looppilot/cli.
 
 The installer copies:
 

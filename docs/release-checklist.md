@@ -1,12 +1,16 @@
 # Release Checklist
 
-Use this checklist before publishing `@looppilot/cli` to npm.
+Use this checklist to audit the `@looppilot/cli@0.1.0` npm release.
 
-Current status: `0.1.0` is prepared for release review. Local validation and GitHub Actions CI have passed. `npm publish` has not been run because this machine is not authenticated to npm.
+Current status: `0.1.0` was published to npm on `2026-06-27T13:41:56.460Z`.
+
+- npm URL: https://www.npmjs.com/package/@looppilot/cli
+- Dist tag: `latest`
+- Shasum: `611c591fa361bf9a1bb4209fd028b8e842eb017a`
 
 ## Package Readiness
 
-- [ ] Confirm the package should be published publicly as `@looppilot/cli`.
+- [x] Confirm the package should be published publicly as `@looppilot/cli`.
 - [x] Confirm `package.json` has `"private": false`, `"license": "MIT"`, repository metadata, and public scoped-package publish config.
 - [x] Confirm `package.json` version is `0.1.0`.
 - [x] Confirm the `files` whitelist contains only source, wrapper, core, fixture, script, docs, README, and license files needed by users.
@@ -29,10 +33,15 @@ Current status: `0.1.0` is prepared for release review. Local validation and Git
 - [x] Run `git diff --check` and confirm no whitespace errors.
 - [x] Confirm GitHub Actions CI mirrors the local release gate for tests, wrapper parity, doctor, package dry-run, and whitespace checks.
 
-## Publish Hold
+## Publish Record
 
 - [x] Do not run `npm publish` until the package contents review has been completed and approved.
 - [x] After push, confirm the GitHub Actions CI run passes on `main`.
-- [ ] Authenticate to npm with publish access for `@looppilot/cli`.
-- [ ] If the dry-run package contents are unexpected, update the `files` whitelist and repeat validation.
-- [ ] After approval, publish from a clean working tree and record the package version and npm URL in the release notes.
+- [x] Authenticate to npm with publish access for `@looppilot/cli`.
+- [x] Confirm the dry-run package contents are expected.
+- [x] Publish from a clean working tree.
+- [x] Record the package version and npm URL in the release notes.
+- [x] Verify `npm view @looppilot/cli version` returns `0.1.0`.
+- [x] Verify `npx @looppilot/cli@0.1.0 --help` runs from a clean temporary directory.
+- [x] Verify published-package Claude install and doctor pass from a clean temporary directory.
+- [x] Smoke-test Claude Code `/should-loop` against the published package without editing files, running commands, or saving artifacts.
