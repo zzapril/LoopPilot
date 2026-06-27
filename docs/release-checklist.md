@@ -2,7 +2,7 @@
 
 Use this checklist before publishing `@looppilot/cli` to npm.
 
-Current status: `0.1.0` is prepared for local release review. `npm publish` has not been run and still requires explicit human approval.
+Current status: `0.1.0` is prepared for release review. Local validation and GitHub Actions CI have passed. `npm publish` has not been run because this machine is not authenticated to npm.
 
 ## Package Readiness
 
@@ -32,6 +32,7 @@ Current status: `0.1.0` is prepared for local release review. `npm publish` has 
 ## Publish Hold
 
 - [x] Do not run `npm publish` until the package contents review has been completed and approved.
-- [ ] After push, confirm the GitHub Actions CI run passes on `main`.
+- [x] After push, confirm the GitHub Actions CI run passes on `main`.
+- [ ] Authenticate to npm with publish access for `@looppilot/cli`.
 - [ ] If the dry-run package contents are unexpected, update the `files` whitelist and repeat validation.
 - [ ] After approval, publish from a clean working tree and record the package version and npm URL in the release notes.

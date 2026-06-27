@@ -31,7 +31,7 @@ Last updated: 2026-06-27
 
 - [x] Install/doctor integration validation in a temporary project.
 - [x] `0.1.0` release-ready metadata and release notes.
-- [x] Final local verification; remote CI and `npm publish` still require explicit post-push review and human approval.
+- [x] Final local verification and GitHub Actions CI passed; `npm publish` still requires npm authentication.
 
 ## Notes
 
