@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify LoopPilot
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run validation suite
+        run: npm test
+
+      - name: Run wrapper parity eval
+        run: npm run eval:wrapper-parity
+
+      - name: Run doctor
+        run: node scripts/looppilot.mjs doctor --target both --json
+
+      - name: Check package contents
+        run: npm pack --dry-run
+        env:
+          npm_config_cache: /tmp/looppilot-npm-cache
+
+      - name: Check whitespace
+        run: git diff --check

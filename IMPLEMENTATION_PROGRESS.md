@@ -18,6 +18,7 @@ Last updated: 2026-06-27
 - [x] Report and review-gate templates plus explicit `save-contract`, `save-report`, and `save-review-gate` commands for user-requested latest files.
 - [x] Package contents and docs consistency validation, including local packed-tarball install smoke checks.
 - [x] CLI argument validation including top-level help and command-specific unsupported/no-op option rejection.
+- [x] GitHub Actions CI configured to mirror the local release gate on push and pull requests.
 
 ## v1 Manual Artifact Progress
 
@@ -30,7 +31,7 @@ Last updated: 2026-06-27
 
 - [x] Install/doctor integration validation in a temporary project.
 - [x] `0.1.0` release-ready metadata and release notes.
-- [x] Final local verification; `npm publish` still requires explicit human approval.
+- [x] Final local verification; remote CI and `npm publish` still require explicit post-push review and human approval.
 
 ## Notes
 

@@ -27,9 +27,11 @@ Current status: `0.1.0` is prepared for local release review. `npm publish` has 
 - [x] Confirm uppercase v1 templates and helper scripts are present in the package contents.
 - [x] Confirm release docs are present so README links and docs consistency validation remain self-contained.
 - [x] Run `git diff --check` and confirm no whitespace errors.
+- [x] Confirm GitHub Actions CI mirrors the local release gate for tests, wrapper parity, doctor, package dry-run, and whitespace checks.
 
 ## Publish Hold
 
 - [x] Do not run `npm publish` until the package contents review has been completed and approved.
+- [ ] After push, confirm the GitHub Actions CI run passes on `main`.
 - [ ] If the dry-run package contents are unexpected, update the `files` whitelist and repeat validation.
 - [ ] After approval, publish from a clean working tree and record the package version and npm URL in the release notes.
