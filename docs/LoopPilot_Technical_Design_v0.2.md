@@ -616,9 +616,24 @@ User: should this loop?
 Codex / Claude Code: runs LoopPilot check inline
 ```
 
-Current helper CLI:
+Primary CLI and agent UX:
 
 ```bash
+looppilot install
+looppilot doctor
+```
+
+```text
+Claude Code: /should-loop <task-or-issue-url>
+Codex: Use LoopPilot on <task-or-issue-url>
+```
+
+Default `looppilot --help` should show only this main path plus a pointer to advanced/debug help. This keeps the product feeling like an agent-native safety button rather than a large standalone CLI.
+
+Advanced/debug helper CLI:
+
+```bash
+looppilot help advanced
 looppilot install --target both --scope project
 looppilot doctor --target both --json
 looppilot scan
@@ -639,11 +654,11 @@ looppilot save-run-log --from /path/to/run-log.md
 
 No MVP command should be named `run`, because execution belongs to the current agent. A `check` command is also not part of the current release-ready surface; decision execution remains agent-native through Codex and Claude Code wrappers.
 
-`issue-intake` is an internal helper/debug surface, not the primary UX. The primary UX remains:
+`issue-intake`, `scan`, `host-capabilities`, `claude-project-summary`, `export`, and `save-*` are internal helper, advanced, or debug surfaces, not the primary UX. The primary UX remains:
 
 ```text
-Claude Code: /should-loop https://github.com/owner/repo/issues/123
-Codex: Use LoopPilot on https://github.com/owner/repo/issues/123
+Claude Code: /should-loop <task-or-issue-url>
+Codex: Use LoopPilot on <task-or-issue-url>
 ```
 
 The helper reads only one issue endpoint, redacts obvious secrets, marks `possibly_incomplete` when comments, comment anchors, truncation, or issue text suggest omitted context may matter, and leaves all semantic judgment to the current Codex or Claude Code session.

@@ -1,6 +1,6 @@
 # LoopPilot Implementation Progress
 
-Last updated: 2026-06-27
+Last updated: 2026-06-28
 
 ## Feature Progress
 
@@ -20,6 +20,7 @@ Last updated: 2026-06-27
 - [x] Package contents and docs consistency validation, including local packed-tarball install smoke checks.
 - [x] CLI argument validation including top-level help and command-specific unsupported/no-op option rejection.
 - [x] GitHub Actions CI configured to mirror the local release gate on push and pull requests.
+- [x] `0.2.1` UX simplification candidate: default install/doctor path, beginner-friendly help, and `help advanced` for helper/debug commands.
 
 ## v1 Manual Artifact Progress
 
@@ -32,13 +33,15 @@ Last updated: 2026-06-27
 
 - [x] Install/doctor integration validation in a temporary project.
 - [x] `0.1.0` published to npm as `@looppilot/cli`.
-- [x] `0.2.0` release-ready locally with GitHub issue intake; not published without separate approval.
+- [x] `0.2.0` published to npm with GitHub issue intake.
+- [x] `0.2.1` release candidate prepared locally for simpler install/help UX; not published without separate approval.
 - [x] Final local verification, GitHub Actions CI, registry verification, npx install/doctor, and Claude Code smoke test passed.
 
 ## Notes
 
 - v0 remains chat-first and agent-native.
 - v0.2 issue intake remains agent-native: users paste issue URLs into Claude Code or Codex, while LoopPilot only reads and packages a single issue as untrusted context.
+- `context-summary`, issue comments expansion, and linked PR intake remain future work rather than part of the `0.2.1` simplification batch.
 - File writes are explicit-save or explicit-export only; v1 manual artifacts are not automatic runner state.
 - `RUN_WITH_CONTRACT` requires known host capabilities, objective gate, bounded rounds, stop conditions, and forbidden actions.
 - LoopPilot still does not implement a runner, provider registry, scheduler, GitHub issue queue, deployer, or automatic commit/push flow.

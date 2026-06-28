@@ -36,6 +36,10 @@ function run(args) {
   return spawnSync(process.execPath, [cli, ...args], { encoding: "utf8" });
 }
 
+function runInProject(args) {
+  return spawnSync(process.execPath, [cli, ...args], { cwd: tempDir, encoding: "utf8" });
+}
+
 function assertDoctorMetadata(report, label) {
   const metadata = report.metadata;
   if (!metadata || typeof metadata !== "object") {
@@ -91,8 +95,18 @@ function assertDoctorCommand(target) {
   }
 }
 
-const install = run(["install", "--target", "both", "--scope", "project", "--cwd", tempDir]);
+const install = runInProject(["install"]);
 if (install.status !== 0) errors.push(`install failed: ${install.stderr || install.stdout}`);
+else {
+  for (const expected of [
+    "Next:",
+    "Claude Code: /should-loop <task-or-issue-url>",
+    "Codex: Use LoopPilot on <task-or-issue-url>",
+    "Verify: looppilot doctor",
+  ]) {
+    if (!install.stdout.includes(expected)) errors.push(`install output missing ${expected}`);
+  }
+}
 
 const missingInstallDir = `${tempDir}-missing`;
 const missingInstall = run(["install", "--target", "both", "--scope", "project", "--cwd", missingInstallDir, "--dry-run"]);
@@ -114,6 +128,18 @@ const doctorJsonReport = assertDoctorCommand("both");
 if (doctorJsonReport) {
   if (!Array.isArray(doctorJsonReport.checks) || doctorJsonReport.checks.length === 0) errors.push("doctor --json missing checks");
   assertDoctorMetadata(doctorJsonReport, "doctor --json");
+}
+
+const defaultDoctor = runInProject(["doctor", "--json"]);
+if (defaultDoctor.status !== 0) errors.push(`doctor --json default target failed after install: ${defaultDoctor.stderr || defaultDoctor.stdout}`);
+else {
+  try {
+    const report = JSON.parse(defaultDoctor.stdout);
+    if (!report.ok) errors.push("doctor --json default target report was not ok");
+    if (report.target !== "both") errors.push("doctor --json default target was not both");
+  } catch (error) {
+    errors.push(`doctor --json default target output was not JSON: ${error.message}`);
+  }
 }
 
 for (const target of ["codex", "claude"]) {

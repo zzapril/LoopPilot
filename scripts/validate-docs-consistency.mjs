@@ -11,6 +11,7 @@ const requiredDocs = [
   "docs/release-checklist.md",
   "docs/release-notes-0.1.0.md",
   "docs/release-notes-0.2.0.md",
+  "docs/release-notes-0.2.1.md",
 ];
 
 const discoveredDocs = fs.existsSync("docs")
@@ -44,7 +45,12 @@ const forbiddenFragments = [
 const requiredFragmentsByFile = {
   "README.md": [
     "@looppilot/cli",
+    "0.2.1",
     "0.2.0",
+    "npx @looppilot/cli@0.2.1 install",
+    "/should-loop <task-or-issue-url>",
+    "Use LoopPilot on <task-or-issue-url>",
+    "Advanced / Debug",
     "GitHub Copilot coding agent",
     "OpenHands",
     "SWE-agent",
@@ -60,6 +66,7 @@ const requiredFragmentsByFile = {
   "IMPLEMENTATION_PROGRESS.md": [
     "0.1.0",
     "0.2.0",
+    "0.2.1",
     "issue-intake",
     ".looppilot/scripts/issue-intake.mjs",
     ".looppilot/latest-review-gate.md",
@@ -80,6 +87,7 @@ const requiredFragmentsByFile = {
     "save-vision",
   ],
   "docs/LoopPilot_Technical_Design_v0.2.md": [
+    "looppilot help advanced",
     "looppilot issue-intake",
     "trajectory-lite",
     "hidden chain-of-thought",
@@ -93,9 +101,13 @@ const requiredFragmentsByFile = {
     "A `check` command is also not part of the current release-ready surface",
   ],
   "docs/LoopPilot_Quickstart.md": [
+    "0.2.1",
     "0.2.0",
+    "npx @looppilot/cli@0.2.1 install",
+    "/should-loop <task-or-issue-url>",
+    "Use LoopPilot on <task-or-issue-url>",
+    "Advanced / Debug",
     "issue-intake",
-    "--cwd /path/to/your/project",
     "possibly_incomplete",
     "save-review-gate",
     ".looppilot/VISION.md",
@@ -111,6 +123,7 @@ const requiredFragmentsByFile = {
   "docs/release-checklist.md": [
     "0.1.0",
     "0.2.0",
+    "0.2.1",
     ".looppilot/scripts/issue-intake.mjs",
     "https://www.npmjs.com/package/@looppilot/cli",
     "611c591fa361bf9a1bb4209fd028b8e842eb017a",
@@ -118,6 +131,9 @@ const requiredFragmentsByFile = {
     ".looppilot/STATE.md",
     ".looppilot/RUN_LOG.md",
     "Smoke-test Claude Code `/should-loop`",
+    "npm_config_cache=/private/tmp/looppilot-npm-cache",
+    "Bypass two-factor authentication (2FA)",
+    "revoke/delete",
   ],
   "docs/release-notes-0.1.0.md": [
     "published to npm",
@@ -134,6 +150,14 @@ const requiredFragmentsByFile = {
     ".looppilot/scripts/issue-intake.mjs",
     "possibly_incomplete",
     "Publish verification records",
+  ],
+  "docs/release-notes-0.2.1.md": [
+    "release candidate",
+    "@looppilot/cli@0.2.1",
+    "npx @looppilot/cli@0.2.1 install",
+    "/should-loop <task-or-issue-url>",
+    "Use LoopPilot on <task-or-issue-url>",
+    "looppilot help advanced",
   ],
 };
 

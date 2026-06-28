@@ -2,19 +2,19 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.2.0` is the latest release line. `0.2.0` was published to npm on `2026-06-28T14:51:47.490Z`.
+Current status: `0.2.0` is the latest published release line. `0.2.0` was published to npm on `2026-06-28T14:51:47.490Z`.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
 - Shasum: `06bce22ba875bf5f63298e26aa8386702fcca9f6`
 
-Current repository status: `0.2.0` is publish-approved code for agent-native GitHub issue URL intake.
+Current repository status: `0.2.1` is the next release candidate for UX simplification. Do not publish it without a separate approval.
 
 ## Package Readiness
 
 - [x] Confirm the package should be published publicly as `@looppilot/cli`.
 - [x] Confirm `package.json` has `"private": false`, `"license": "MIT"`, repository metadata, and public scoped-package publish config.
-- [x] Confirm `package.json` version is `0.2.0`.
+- [x] Confirm `package.json` version is `0.2.1`.
 - [x] Confirm the `files` whitelist contains only source, wrapper, core, fixture, script, docs, README, and license files needed by users.
 - [x] Confirm no secrets, credentials, local-only files, generated handoff exports, latest files, or generated v1 artifacts are intended for the package.
 - [x] Confirm the README install instructions match the package name and CLI behavior.
@@ -36,6 +36,73 @@ Current repository status: `0.2.0` is publish-approved code for agent-native Git
 - [x] Confirm GitHub issue intake tests cover mock API success, auth headers, PR rejection, readable HTTP errors, redaction, truncation, incomplete-context warnings, output modes, and no heavy endpoint calls.
 - [x] Run `git diff --check` and confirm no whitespace errors.
 - [x] Confirm GitHub Actions CI mirrors the local release gate for tests, wrapper parity, doctor, package dry-run, and whitespace checks.
+
+## npm Publish Playbook
+
+Use this flow for the next npm release. It records the `0.2.0` publishing lessons without storing any real token.
+
+Before publishing:
+
+- Use the temporary npm cache for every npm command in this repo, because the local default cache previously hit an `ELOOP` symlink-loop error.
+- Confirm the version is new. npm versions are immutable; after `0.2.0` is published, new functionality must use `0.2.1`, `0.3.0`, or another new version.
+- Run the release validation commands before `npm publish`.
+- Confirm `npm whoami` returns the expected maintainer account with the temporary cache.
+
+```bash
+env npm_config_cache=/private/tmp/looppilot-npm-cache npm whoami
+npm test
+npm run eval:wrapper-parity
+node scripts/looppilot.mjs doctor --target both --json
+env npm_config_cache=/private/tmp/looppilot-npm-cache npm pack --dry-run
+git diff --check
+```
+
+Authentication notes:
+
+- npm browser login and Security Key/WebAuthn can authenticate the account, but `npm publish` may still fail with `EOTP` if the CLI needs a six-digit authenticator code.
+- If using an npm granular access token, scope it narrowly to `@looppilot/cli`, grant package `Read and write`, set organization permission to `No access`, use a short expiration, and enable `Bypass two-factor authentication (2FA)` only for the release token.
+- Never paste npm tokens into chat, docs, shell history, git commits, logs, or artifacts. If a token is exposed, revoke/delete it immediately in npm Access Tokens after publishing or before retrying.
+
+Safe token-based publish flow:
+
+```bash
+cd /Users/zhangzheng/Documents/LoopPilot
+
+printf 'Paste npm token, then press Enter: ' >/dev/tty
+IFS= read -rs NPM_TOKEN
+printf '\n' >/dev/tty
+
+TMP_NPMRC=/tmp/looppilot-npmrc
+printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_TOKEN" > "$TMP_NPMRC"
+
+env npm_config_userconfig="$TMP_NPMRC" \
+  npm_config_cache=/private/tmp/looppilot-npm-cache \
+  npm publish --access public
+
+rm -f "$TMP_NPMRC"
+unset NPM_TOKEN
+```
+
+Post-publish verification:
+
+```bash
+env npm_config_cache=/private/tmp/looppilot-npm-cache \
+  npm view @looppilot/cli version dist.shasum time --json
+
+TMPDIR=$(mktemp -d /private/tmp/looppilot-smoke-XXXXXX)
+cd "$TMPDIR"
+env npm_config_cache=/private/tmp/looppilot-npm-cache npx @looppilot/cli@<version> --help
+env npm_config_cache=/private/tmp/looppilot-npm-cache npx @looppilot/cli@<version> install --target both --cwd "$TMPDIR"
+env npm_config_cache=/private/tmp/looppilot-npm-cache npx @looppilot/cli@<version> doctor --target both --cwd "$TMPDIR" --json
+```
+
+After verification:
+
+- Record the publish timestamp and shasum in this checklist.
+- Update the matching release notes.
+- Revoke/delete any temporary or exposed npm publish token.
+- Commit the release record.
+- Push to GitHub separately; npm publish success does not imply git push success.
 
 ## 0.1.0 Publish Record
 
@@ -62,3 +129,12 @@ Current repository status: `0.2.0` is publish-approved code for agent-native Git
 - [x] Verify `npm view @looppilot/cli version` returns `0.2.0`.
 - [x] Verify `npx @looppilot/cli@0.2.0 --help` runs from a clean temporary directory.
 - [x] Verify published-package install and doctor pass from a clean temporary directory.
+
+## 0.2.1 Release Candidate Record
+
+- Status: release candidate only; do not run `npm publish` without a separate explicit approval.
+- Focus: simplify primary UX to `looppilot install`, `looppilot doctor`, `/should-loop <task-or-issue-url>`, and `Use LoopPilot on <task-or-issue-url>`.
+- [x] Rerun the full validation section after UX simplification changes.
+- [x] Confirm default `looppilot --help` is beginner-friendly and `looppilot help advanced` contains full helper/debug commands.
+- [x] Verify local packed tarball install and doctor pass from a clean temporary directory.
+- [ ] Confirm `npx @looppilot/cli@0.2.1 install` and `npx @looppilot/cli@0.2.1 doctor` work from a clean temporary directory after publish approval.

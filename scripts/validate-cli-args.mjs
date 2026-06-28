@@ -18,6 +18,21 @@ for (const args of [["--help"], ["-h"], ["help"], ["doctor", "--help"]]) {
   if (!output.includes("Usage:")) errors.push(`${args.join(" ")}: expected help output, got ${JSON.stringify(output.trim())}`);
 }
 
+const defaultHelp = run(["--help"]);
+if (!defaultHelp.stdout.includes("looppilot install")) errors.push("--help: missing install quickstart");
+if (!defaultHelp.stdout.includes("Claude Code: /should-loop <task-or-issue-url>")) errors.push("--help: missing Claude Code primary usage");
+if (!defaultHelp.stdout.includes("Codex:      Use LoopPilot on <task-or-issue-url>")) errors.push("--help: missing Codex primary usage");
+if (!defaultHelp.stdout.includes("looppilot help advanced")) errors.push("--help: missing advanced help pointer");
+for (const advancedOnly of ["looppilot issue-intake --url", "looppilot save-contract", "looppilot export --target"]) {
+  if (defaultHelp.stdout.includes(advancedOnly)) errors.push(`--help: exposed advanced command ${advancedOnly}`);
+}
+
+const advancedHelp = run(["help", "advanced"]);
+if (advancedHelp.status !== 0) errors.push("help advanced: expected help to succeed");
+for (const expected of ["Advanced / Debug", "looppilot issue-intake --url", "looppilot scan", "looppilot export --target", "looppilot save-contract"]) {
+  if (!advancedHelp.stdout.includes(expected)) errors.push(`help advanced: missing ${expected}`);
+}
+
 for (const [args, expected] of [
   [["doctor", "--cwd"], "Missing value for --cwd."],
   [["install", "--target", "--dry-run"], "Missing value for --target."],

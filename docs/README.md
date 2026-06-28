@@ -6,14 +6,14 @@ This directory contains product, technical, release, and future-planning notes. 
 2. `LoopPilot_PRD_v0.2.md` - product scope and non-goals.
 3. `LoopPilot_Technical_Design_v0.2.md` - implementation shape and safety boundaries.
 4. `LoopPilot_Reusable_Artifacts_v1.md` - optional manual artifacts: `VISION.md`, `STATE.md`, `RUN_LOG.md`, and review-gate evidence.
-5. `release-checklist.md`, `release-notes-0.1.0.md`, and `release-notes-0.2.0.md` - published `0.1.0` record plus `0.2.0` release-ready notes.
+5. `release-checklist.md`, `release-notes-0.1.0.md`, `release-notes-0.2.0.md`, and `release-notes-0.2.1.md` - published release records plus next-release UX simplification notes.
 6. `LoopPilot_Implementation_Status_and_Plan_v0.2.md` - audit log of what is implemented and verified.
 
-The v2 orchestration documents now authorize only the narrow agent-native single issue intake implemented for `0.2.0`. They still do not authorize a runner, provider registry, GitHub queue, scheduler, hooks integration, automatic resume, or `looppilot run`.
+The v2 orchestration documents now authorize only the narrow agent-native single issue intake implemented for `0.2.0`. The `0.2.1` repository work simplifies the user-facing install/help path without adding a runner, provider registry, GitHub queue, scheduler, hooks integration, automatic resume, or `looppilot run`.
 
 Current release-ready surface:
 
-- Codex and Claude Code Agent Pack install/doctor helpers.
+- One-command Codex and Claude Code Agent Pack install plus doctor helpers.
 - Read-only `scan`, `host-capabilities`, and `claude-project-summary` helpers.
 - Agent-native GitHub issue URL intake with read-only single issue helper.
 - Explicit handoff `export` commands.

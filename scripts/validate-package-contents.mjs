@@ -67,6 +67,7 @@ if (result.status !== 0) {
       "docs/release-checklist.md",
       "docs/release-notes-0.1.0.md",
       "docs/release-notes-0.2.0.md",
+      "docs/release-notes-0.2.1.md",
       "IMPLEMENTATION_PROGRESS.md",
       "README.md",
       "LICENSE",
@@ -126,6 +127,14 @@ if (result.status !== 0) {
           errors.push(`installed package CLI help failed: ${scriptHelp.stderr || scriptHelp.stdout}`);
         }
 
+        const advancedHelp = spawnSync(process.execPath, ["scripts/looppilot.mjs", "help", "advanced"], {
+          cwd: installedPackageDir,
+          encoding: "utf8",
+        });
+        if (advancedHelp.status !== 0 || !advancedHelp.stdout.includes("looppilot issue-intake --url")) {
+          errors.push(`installed package CLI advanced help failed: ${advancedHelp.stderr || advancedHelp.stdout}`);
+        }
+
         const doctor = spawnSync(process.execPath, ["scripts/looppilot.mjs", "doctor", "--target", "both", "--json"], {
           cwd: installedPackageDir,
           encoding: "utf8",
@@ -141,7 +150,7 @@ if (result.status !== 0) {
           }
         }
 
-        const install = spawnSync(process.execPath, ["scripts/looppilot.mjs", "install", "--target", "both", "--scope", "project", "--dry-run"], {
+        const install = spawnSync(process.execPath, ["scripts/looppilot.mjs", "install", "--dry-run"], {
           cwd: installedPackageDir,
           encoding: "utf8",
         });

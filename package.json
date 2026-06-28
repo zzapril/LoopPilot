@@ -1,6 +1,6 @@
 {
   "name": "@looppilot/cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": false,
   "type": "module",
   "description": "Agent-native loop qualification pack for Codex and Claude Code.",
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "doctor": "node scripts/looppilot.mjs doctor --target both",
-    "install:project": "node scripts/looppilot.mjs install --target both --scope project",
+    "install:project": "node scripts/looppilot.mjs install",
     "validate:fixtures": "node scripts/validate-fixtures.mjs",
     "validate:wrappers": "node scripts/validate-wrappers.mjs",
     "test": "node scripts/validate-all.mjs",

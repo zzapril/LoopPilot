@@ -46,6 +46,27 @@ const wrapperFilesByTarget = {
 function printHelp() {
   console.log(`LoopPilot
 
+Install once, then ask your current agent whether a task should loop.
+
+Usage:
+  looppilot install
+  looppilot doctor [--json]
+
+Agent usage:
+  Claude Code: /should-loop <task-or-issue-url>
+  Codex:      Use LoopPilot on <task-or-issue-url>
+
+Notes:
+  install copies the Codex and Claude Code Agent Pack into this project.
+  doctor verifies the installed files and safety fixtures.
+  LoopPilot does not run background loops, commit, push, deploy, publish, or install dependencies.
+  Advanced/debug commands are available with: looppilot help advanced
+`);
+}
+
+function printAdvancedHelp() {
+  console.log(`LoopPilot Advanced / Debug
+
 Usage:
   looppilot install [--target both|codex|claude] [--scope project] [--cwd <path>] [--force] [--dry-run]
   looppilot doctor [--target both|codex|claude] [--cwd <path>] [--json] [--output <path>] [--force] [--dry-run]
@@ -91,7 +112,15 @@ function parseArgs(argv) {
     number: null,
     url: null,
     json: false,
+    advancedHelp: false,
   };
+
+  if (command === "help" && rest.length === 1 && rest[0] === "advanced") {
+    options.command = null;
+    options.help = true;
+    options.advancedHelp = true;
+    return options;
+  }
 
   if (command === "--help" || command === "-h" || command === "help") {
     options.command = null;
@@ -281,6 +310,10 @@ function install(options) {
   if (options.dryRun) console.log(`Would write: ${results.wouldWrite}`);
   else console.log(`Written: ${results.written}`);
   console.log(`Unchanged: ${results.unchanged}`);
+  console.log("Next:");
+  console.log("  Claude Code: /should-loop <task-or-issue-url>");
+  console.log("  Codex: Use LoopPilot on <task-or-issue-url>");
+  console.log("  Verify: looppilot doctor");
 }
 
 function sha256File(filePath) {
@@ -508,7 +541,8 @@ function doctor(options) {
 try {
   const options = parseArgs(process.argv.slice(2));
   if (!options.command || options.help) {
-    printHelp();
+    if (options.advancedHelp) printAdvancedHelp();
+    else printHelp();
   } else if (options.command === "install") {
     install(options);
   } else if (options.command === "doctor") {
