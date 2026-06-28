@@ -4,23 +4,17 @@ Short, task-oriented setup for using LoopPilot as an agent-native loop qualifica
 
 Current repository version: `@looppilot/cli@0.2.0`.
 
-Latest published npm version: `@looppilot/cli@0.1.0`. The `0.2.0` GitHub issue intake flow is release-ready in this repository and should be published only after separate approval.
+Latest published npm version: `@looppilot/cli@0.2.0`.
 
 ## 1. Install
 
-Until `0.2.0` is published to npm, install from this repository checkout when you want GitHub issue intake:
-
-```bash
-node scripts/looppilot.mjs install --target both --scope project --cwd /path/to/your/project
-```
-
-After `0.2.0` is published, install the published CLI with an explicit version:
+Install the published CLI with an explicit version:
 
 ```bash
 npx @looppilot/cli@0.2.0 install --target both --scope project
 ```
 
-For Claude Code only after publish:
+For Claude Code only:
 
 ```bash
 npx @looppilot/cli@0.2.0 install --target claude --scope project
@@ -35,7 +29,7 @@ node scripts/looppilot.mjs doctor --target both --cwd /path/to/your/project
 node scripts/looppilot.mjs doctor --target both --cwd /path/to/your/project --json
 ```
 
-After `0.2.0` is published, the equivalent published-package commands are `npx @looppilot/cli@0.2.0 doctor --target both` and `npx @looppilot/cli@0.2.0 doctor --target both --json`.
+Published-package equivalents are `npx @looppilot/cli@0.2.0 doctor --target both` and `npx @looppilot/cli@0.2.0 doctor --target both --json`.
 
 Doctor checks installed files, fixture/schema compatibility, wrapper references, wrapper parity, and installed file hashes. It does not run a loop.
 

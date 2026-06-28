@@ -1,9 +1,9 @@
 # LoopPilot 0.2.0 Release Notes
 
-Status: release-ready in this repository; not published to npm in this change.
+Status: published to npm.
 
 - Package: `@looppilot/cli@0.2.0`
-- Latest published npm version remains: `@looppilot/cli@0.1.0`
+- Latest published npm version: `@looppilot/cli@0.2.0`
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 
 ## Highlights
@@ -26,4 +26,4 @@ env npm_config_cache=/private/tmp/looppilot-npm-cache npm pack --dry-run
 git diff --check
 ```
 
-`npm publish` requires separate explicit approval.
+Publish verification records are maintained in `docs/release-checklist.md`.

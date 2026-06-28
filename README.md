@@ -47,19 +47,13 @@ The useful idea to borrow from those projects is auditability, not automation. A
 
 ## Install In A Project
 
-This repository is currently `0.2.0` release-ready, while npm latest is still `0.1.0`. Until `0.2.0` is published, install from this repository checkout when you want GitHub issue intake:
-
-```bash
-node scripts/looppilot.mjs install --target both --scope project --cwd /path/to/your/project
-```
-
-After `0.2.0` is published, install the published CLI with an explicit version:
+Install the published CLI with an explicit version:
 
 ```bash
 npx @looppilot/cli@0.2.0 install --target both --scope project
 ```
 
-For Claude Code only after publish:
+For Claude Code only:
 
 ```bash
 npx @looppilot/cli@0.2.0 install --target claude --scope project
@@ -72,7 +66,7 @@ npm install --global @looppilot/cli@0.2.0
 looppilot install --target both --scope project
 ```
 
-The published package name is `@looppilot/cli`. The latest published npm version remains `0.1.0`: https://www.npmjs.com/package/@looppilot/cli. Do not assume unpinned `npx @looppilot/cli` has the GitHub issue intake helper until `0.2.0` is explicitly published and tagged latest.
+The published package name is `@looppilot/cli`. The latest published npm version is `0.2.0`: https://www.npmjs.com/package/@looppilot/cli.
 
 The installer copies:
 

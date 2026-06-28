@@ -2,13 +2,13 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.1.0` was published to npm on `2026-06-27T13:41:56.460Z`.
+Current status: `0.2.0` is the latest release line. `0.1.0` was published to npm on `2026-06-27T13:41:56.460Z`.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
 - Shasum: `611c591fa361bf9a1bb4209fd028b8e842eb017a`
 
-Current repository status: `0.2.0` is release-ready code for agent-native GitHub issue URL intake. It is not published in this change; `npm publish` requires separate explicit approval.
+Current repository status: `0.2.0` is publish-approved code for agent-native GitHub issue URL intake.
 
 ## Package Readiness
 
@@ -50,8 +50,11 @@ Current repository status: `0.2.0` is release-ready code for agent-native GitHub
 - [x] Verify published-package Claude install and doctor pass from a clean temporary directory.
 - [x] Smoke-test Claude Code `/should-loop` against the published package without editing files, running commands, or saving artifacts.
 
-## 0.2.0 Publish Boundary
+## 0.2.0 Publish Record
 
-- [x] Do not run `npm publish` for `0.2.0` in this change.
-- [x] Keep `0.1.0` recorded as the latest published npm version until a separate publish approval is given.
-- [x] Before any future `0.2.0` publish, rerun the full validation section and confirm the package tarball includes `.looppilot/scripts/issue-intake.mjs`, wrapper updates, docs, and `scripts/validate-issue-intake.mjs`.
+- [x] Rerun the full validation section and confirm the package tarball includes `.looppilot/scripts/issue-intake.mjs`, wrapper updates, docs, and `scripts/validate-issue-intake.mjs`.
+- [ ] Publish `@looppilot/cli@0.2.0` to npm.
+- [ ] Record the published timestamp and shasum after npm publish succeeds.
+- [ ] Verify `npm view @looppilot/cli version` returns `0.2.0`.
+- [ ] Verify `npx @looppilot/cli@0.2.0 --help` runs from a clean temporary directory.
+- [ ] Verify published-package install and doctor pass from a clean temporary directory.

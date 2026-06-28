@@ -44,7 +44,6 @@ const forbiddenFragments = [
 const requiredFragmentsByFile = {
   "README.md": [
     "@looppilot/cli",
-    "0.1.0",
     "0.2.0",
     "GitHub Copilot coding agent",
     "OpenHands",
@@ -52,7 +51,6 @@ const requiredFragmentsByFile = {
     "trajectory-lite",
     "issue-intake",
     ".looppilot/scripts/issue-intake.mjs",
-    "--cwd /path/to/your/project",
     "possibly_incomplete",
     ".looppilot/latest-review-gate.md",
     ".looppilot/VISION.md",
@@ -95,7 +93,6 @@ const requiredFragmentsByFile = {
     "A `check` command is also not part of the current release-ready surface",
   ],
   "docs/LoopPilot_Quickstart.md": [
-    "0.1.0",
     "0.2.0",
     "issue-intake",
     "--cwd /path/to/your/project",
@@ -132,12 +129,11 @@ const requiredFragmentsByFile = {
     "Claude Code `2.1.168`",
   ],
   "docs/release-notes-0.2.0.md": [
-    "release-ready",
+    "published to npm",
     "@looppilot/cli@0.2.0",
-    "@looppilot/cli@0.1.0",
     ".looppilot/scripts/issue-intake.mjs",
     "possibly_incomplete",
-    "npm publish",
+    "Publish verification records",
   ],
 };
 
