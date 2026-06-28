@@ -2,11 +2,11 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.2.0` is the latest release line. `0.1.0` was published to npm on `2026-06-27T13:41:56.460Z`.
+Current status: `0.2.0` is the latest release line. `0.2.0` was published to npm on `2026-06-28T14:51:47.490Z`.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
-- Shasum: `611c591fa361bf9a1bb4209fd028b8e842eb017a`
+- Shasum: `06bce22ba875bf5f63298e26aa8386702fcca9f6`
 
 Current repository status: `0.2.0` is publish-approved code for agent-native GitHub issue URL intake.
 
@@ -39,6 +39,8 @@ Current repository status: `0.2.0` is publish-approved code for agent-native Git
 
 ## 0.1.0 Publish Record
 
+- Published: `2026-06-27T13:41:56.460Z`
+- Shasum: `611c591fa361bf9a1bb4209fd028b8e842eb017a`
 - [x] Do not run `npm publish` until the package contents review has been completed and approved.
 - [x] After push, confirm the GitHub Actions CI run passes on `main`.
 - [x] Authenticate to npm with publish access for `@looppilot/cli`.
@@ -52,9 +54,11 @@ Current repository status: `0.2.0` is publish-approved code for agent-native Git
 
 ## 0.2.0 Publish Record
 
+- Published: `2026-06-28T14:51:47.490Z`
+- Shasum: `06bce22ba875bf5f63298e26aa8386702fcca9f6`
 - [x] Rerun the full validation section and confirm the package tarball includes `.looppilot/scripts/issue-intake.mjs`, wrapper updates, docs, and `scripts/validate-issue-intake.mjs`.
-- [ ] Publish `@looppilot/cli@0.2.0` to npm.
-- [ ] Record the published timestamp and shasum after npm publish succeeds.
-- [ ] Verify `npm view @looppilot/cli version` returns `0.2.0`.
-- [ ] Verify `npx @looppilot/cli@0.2.0 --help` runs from a clean temporary directory.
-- [ ] Verify published-package install and doctor pass from a clean temporary directory.
+- [x] Publish `@looppilot/cli@0.2.0` to npm.
+- [x] Record the published timestamp and shasum after npm publish succeeds.
+- [x] Verify `npm view @looppilot/cli version` returns `0.2.0`.
+- [x] Verify `npx @looppilot/cli@0.2.0 --help` runs from a clean temporary directory.
+- [x] Verify published-package install and doctor pass from a clean temporary directory.
