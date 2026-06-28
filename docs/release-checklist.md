@@ -2,19 +2,19 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.2.0` is the latest published release line. `0.2.0` was published to npm on `2026-06-28T14:51:47.490Z`.
+Current status: `0.2.2` is the latest published release line. `0.2.2` was published to npm on `2026-06-28T16:26:38.021Z`.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
-- Shasum: `06bce22ba875bf5f63298e26aa8386702fcca9f6`
+- Shasum: `f9559a1cfa9f05e08e1ec042db9006154a759e74`
 
-Current repository status: `0.2.1` is the next release candidate for UX simplification. Do not publish it without a separate approval.
+Current repository status: `0.2.2` is a published documentation hotfix for the UX simplification release.
 
 ## Package Readiness
 
 - [x] Confirm the package should be published publicly as `@looppilot/cli`.
 - [x] Confirm `package.json` has `"private": false`, `"license": "MIT"`, repository metadata, and public scoped-package publish config.
-- [x] Confirm `package.json` version is `0.2.1`.
+- [x] Confirm `package.json` version is `0.2.2`.
 - [x] Confirm the `files` whitelist contains only source, wrapper, core, fixture, script, docs, README, and license files needed by users.
 - [x] Confirm no secrets, credentials, local-only files, generated handoff exports, latest files, or generated v1 artifacts are intended for the package.
 - [x] Confirm the README install instructions match the package name and CLI behavior.
@@ -130,11 +130,24 @@ After verification:
 - [x] Verify `npx @looppilot/cli@0.2.0 --help` runs from a clean temporary directory.
 - [x] Verify published-package install and doctor pass from a clean temporary directory.
 
-## 0.2.1 Release Candidate Record
+## 0.2.1 Publish Record
 
-- Status: release candidate only; do not run `npm publish` without a separate explicit approval.
+- Published: `2026-06-28T16:14:10.092Z`
+- Shasum: `a7f100660d0174036ceac82a93f2f1b64e0ac28e`
 - Focus: simplify primary UX to `looppilot install`, `looppilot doctor`, `/should-loop <task-or-issue-url>`, and `Use LoopPilot on <task-or-issue-url>`.
 - [x] Rerun the full validation section after UX simplification changes.
 - [x] Confirm default `looppilot --help` is beginner-friendly and `looppilot help advanced` contains full helper/debug commands.
 - [x] Verify local packed tarball install and doctor pass from a clean temporary directory.
-- [ ] Confirm `npx @looppilot/cli@0.2.1 install` and `npx @looppilot/cli@0.2.1 doctor` work from a clean temporary directory after publish approval.
+- [x] Publish `@looppilot/cli@0.2.1` to npm.
+- [x] Record the published timestamp and shasum after npm publish succeeds.
+- [x] Confirm `npx @looppilot/cli@0.2.1 --help`, `install`, and `doctor --json` work from a clean temporary directory.
+
+## 0.2.2 Publish Record
+
+- Published: `2026-06-28T16:26:38.021Z`
+- Shasum: `f9559a1cfa9f05e08e1ec042db9006154a759e74`
+- Status: documentation hotfix published for npm package README/Quickstart install accuracy.
+- Focus: make the npm package page point directly to `npx @looppilot/cli@0.2.2 install`.
+- [x] Publish `@looppilot/cli@0.2.2` to npm.
+- [x] Record the published timestamp and shasum after npm publish succeeds.
+- [x] Confirm `npx @looppilot/cli@0.2.2 --help`, `install`, and `doctor --json` work from a clean temporary directory.

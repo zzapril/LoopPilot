@@ -6,20 +6,14 @@ It is not a background issue-fixing robot. It does not create branches, commits,
 
 ## Quickstart
 
-Current repository version: `@looppilot/cli@0.2.1`.
+Current repository version: `@looppilot/cli@0.2.2`.
 
-Latest published npm version: `@looppilot/cli@0.2.0` until `0.2.1` is published.
+Latest published npm version: `@looppilot/cli@0.2.2`.
 
-Install the Agent Pack in your project with the latest published package:
-
-```bash
-npx @looppilot/cli@0.2.0 install
-```
-
-After `0.2.1` is published, the recommended explicit-version command becomes:
+Install the Agent Pack in your project:
 
 ```bash
-npx @looppilot/cli@0.2.1 install
+npx @looppilot/cli@0.2.2 install
 ```
 
 Then ask inside your current agent session:
@@ -29,10 +23,10 @@ Claude Code: /should-loop <task-or-issue-url>
 Codex: Use LoopPilot on <task-or-issue-url>
 ```
 
-Optional install check today:
+Optional install check:
 
 ```bash
-npx @looppilot/cli@0.2.0 doctor
+npx @looppilot/cli@0.2.2 doctor
 ```
 
 For the short task flow, see [LoopPilot Quickstart](docs/LoopPilot_Quickstart.md). For product, technical, release, and planning docs, see [LoopPilot Docs](docs/README.md).

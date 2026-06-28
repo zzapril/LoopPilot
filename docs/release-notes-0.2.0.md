@@ -3,7 +3,7 @@
 Status: published to npm.
 
 - Package: `@looppilot/cli@0.2.0`
-- Latest published npm version: `@looppilot/cli@0.2.0`
+- Published npm version: `@looppilot/cli@0.2.0`
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 
 ## Highlights

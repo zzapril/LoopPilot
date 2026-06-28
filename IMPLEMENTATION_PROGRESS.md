@@ -20,7 +20,8 @@ Last updated: 2026-06-28
 - [x] Package contents and docs consistency validation, including local packed-tarball install smoke checks.
 - [x] CLI argument validation including top-level help and command-specific unsupported/no-op option rejection.
 - [x] GitHub Actions CI configured to mirror the local release gate on push and pull requests.
-- [x] `0.2.1` UX simplification candidate: default install/doctor path, beginner-friendly help, and `help advanced` for helper/debug commands.
+- [x] `0.2.1` UX simplification: default install/doctor path, beginner-friendly help, and `help advanced` for helper/debug commands.
+- [x] `0.2.2` documentation hotfix: npm package README and Quickstart point to the current published install version.
 
 ## v1 Manual Artifact Progress
 
@@ -34,7 +35,8 @@ Last updated: 2026-06-28
 - [x] Install/doctor integration validation in a temporary project.
 - [x] `0.1.0` published to npm as `@looppilot/cli`.
 - [x] `0.2.0` published to npm with GitHub issue intake.
-- [x] `0.2.1` release candidate prepared locally for simpler install/help UX; not published without separate approval.
+- [x] `0.2.1` published to npm with simpler install/help UX.
+- [x] `0.2.2` published to npm as a documentation hotfix for package-page install accuracy.
 - [x] Final local verification, GitHub Actions CI, registry verification, npx install/doctor, and Claude Code smoke test passed.
 
 ## Notes

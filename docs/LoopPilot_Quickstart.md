@@ -2,22 +2,16 @@
 
 LoopPilot should feel like a safety button inside Claude Code or Codex: install once, then ask whether a task should loop.
 
-Current repository version: `@looppilot/cli@0.2.1`.
+Current repository version: `@looppilot/cli@0.2.2`.
 
-Latest published npm version: `@looppilot/cli@0.2.0` until `0.2.1` is published.
+Latest published npm version: `@looppilot/cli@0.2.2`.
 
 ## 1. Install Once
 
-Already-published install:
+Install:
 
 ```bash
-npx @looppilot/cli@0.2.0 install
-```
-
-After `0.2.1` is published, the recommended explicit-version command becomes:
-
-```bash
-npx @looppilot/cli@0.2.1 install
+npx @looppilot/cli@0.2.2 install
 ```
 
 The default install target is both Codex and Claude Code for the current project. Advanced users can still override target, scope, cwd, force, or dry-run behavior with `looppilot help advanced`.
@@ -51,10 +45,10 @@ LoopPilot returns one of three outcomes before loop-like execution:
 
 ## 3. Verify If Needed
 
-If install looks wrong today, run:
+If install looks wrong, run:
 
 ```bash
-npx @looppilot/cli@0.2.0 doctor
+npx @looppilot/cli@0.2.2 doctor
 ```
 
 `doctor` checks installed files, fixture/schema compatibility, wrapper references, wrapper parity, and installed file hashes. It does not run a loop.
