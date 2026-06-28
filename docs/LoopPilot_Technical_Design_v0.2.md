@@ -580,6 +580,29 @@ Only generated on request:
 
 Export files are not controlled execution. They are instructions for another agent/user workflow.
 
+### 10.6 Future trajectory-lite audit artifact
+
+LoopPilot should consider a future optional `trajectory-lite` artifact, inspired by autonomous issue-fixing tools but scoped to user-visible facts only.
+
+It may record:
+
+- original user input or issue URL;
+- context sources read, such as issue metadata or scan summary;
+- incomplete-context warnings;
+- final `NO_GO` / `PLAN_ONLY` / `RUN_WITH_CONTRACT` decision;
+- proposed verifier gate and stop conditions;
+- user confirmations requested and received;
+- command names and result summaries when the current agent executes a contract.
+
+It must not record:
+
+- hidden chain-of-thought or private model reasoning;
+- secrets, token values, private environment variables, or raw credential-bearing logs;
+- enough command output to become a log dump;
+- any runner state that implies automatic resume.
+
+This is not part of the `0.2.0` release-ready surface. It is a candidate for a later auditability-focused release after the issue-intake flow is stable.
+
 ---
 
 ## 11. CLI / Command Surface

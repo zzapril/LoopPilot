@@ -20,3 +20,5 @@ Current release-ready surface:
 - Explicit `save-*` commands for user-requested durable files.
 
 Default behavior remains chat-first: no generated latest files, no generated v1 artifacts, no automatic commit/push/deploy/publish, and no background execution.
+
+For product positioning, see the README and PRD sections comparing LoopPilot with GitHub Copilot coding agent, OpenHands-style issue resolvers, and SWE-agent-style autonomous issue fixers. LoopPilot borrows auditability ideas, but it does not become an automatic issue-fixing agent.

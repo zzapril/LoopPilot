@@ -33,6 +33,18 @@ Not implemented by design:
 - No scheduled loop platform or GitHub issue queue.
 - No automatic commit, push, deploy, publish, or dependency installation.
 
+## How LoopPilot Differs From Coding Agents
+
+LoopPilot is not trying to replace GitHub Copilot coding agent, OpenHands, or SWE-agent.
+
+| Project type | Typical behavior | LoopPilot boundary |
+|---|---|---|
+| GitHub Copilot coding agent | Assign an issue/task to a cloud agent that can inspect the repo, make changes, and open a pull request | LoopPilot does not create branches, commits, pull requests, or GitHub comments |
+| OpenHands-style issue resolver | Trigger an agent from labels/comments or a web/cloud workspace to work on issues | LoopPilot does not watch labels, scan queues, or run as a background resolver |
+| SWE-agent-style autonomous issue fixer | Run an agent loop against a GitHub issue and inspect trajectories/results | LoopPilot only prepares a safe decision and contract for the current Codex or Claude Code session |
+
+The useful idea to borrow from those projects is auditability, not automation. A future LoopPilot `trajectory-lite` artifact may record user-visible facts such as the input, context read, incomplete-context warnings, final decision, requested confirmation, proposed gate, and command/result summaries. It must not record hidden model reasoning, and it is not required for the `0.2.0` release-ready surface.
+
 ## Install In A Project
 
 This repository is currently `0.2.0` release-ready, while npm latest is still `0.1.0`. Until `0.2.0` is published, install from this repository checkout when you want GitHub issue intake:

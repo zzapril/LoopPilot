@@ -501,6 +501,15 @@ node scripts/looppilot.mjs install --target both --scope project --dry-run
 2. 可继续扩展 fixture taxonomy，例如为每个 taxonomy 设置最低样例数。
 3. 可进一步把 doctor 输出扩展为 JSON report，方便 CI 机器读取。
 
+### P2：后续可审计性增强
+
+1. 设计 `trajectory-lite` artifact，但不要在 `0.2.0` 中实现为默认输出。
+2. 只记录用户可见事实：输入、读取的上下文、`possibly_incomplete` warning、decision、建议 gate、用户确认、命令/验证结果摘要。
+3. 明确禁止记录隐藏 chain-of-thought、secret、token、环境变量值或原始长日志。
+4. 保持显式保存策略：除非用户要求保存，否则不写 `.looppilot/` artifact。
+
+判断：trajectory-lite 值得做，但它不是当前 release-ready 的阻塞项。它更适合作为 issue-intake 稳定后的审计增强，而不是现在扩成 runner 日志。
+
 ### 暂不建议做
 
 1. `looppilot run` 或任何后台 runner。

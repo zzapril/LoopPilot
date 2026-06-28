@@ -49,7 +49,35 @@ LoopPilot 是：
 
 > LoopPilot 负责“该不该 loop、怎么安全 loop”；Codex / Claude Code 负责真正执行。
 
-### 2.1 进一步收敛：v0 不是 CLI 产品，而是 Agent Pack
+### 2.1 和 Copilot / OpenHands / SWE-agent 的区别
+
+LoopPilot 处在 coding agent 之前，不是一个新的自动修 issue agent。
+
+| 类型 | 典型行为 | LoopPilot 的边界 |
+|---|---|---|
+| GitHub Copilot coding agent | 把 issue/task 交给 cloud agent，由 agent 研究仓库、改代码、开 PR | LoopPilot 不创建 branch、commit、PR，也不写 GitHub comment |
+| OpenHands-style issue resolver | 通过 label/comment/web workspace 触发 agent 处理 issue | LoopPilot 不监听 label，不扫描 issue queue，不做后台 resolver |
+| SWE-agent-style autonomous issue fixer | 针对 GitHub issue 跑 agent loop，并保留 trajectory / result 供检查 | LoopPilot 只给当前 Codex / Claude Code session 提供 decision 和 contract |
+
+这些项目值得借鉴的是：
+
+- 更清晰的 issue intake。
+- 可审计的执行记录。
+- 明确的 stop reason 和 verifier gate。
+
+但 MVP 不借鉴的是：
+
+- 自动领取 issue。
+- 自动修改代码。
+- 自动创建 PR。
+- 自动评论/关闭 issue。
+- 自己维护 agent runner 或 provider。
+
+因此，LoopPilot 的产品心智应保持为：
+
+> 它不是“帮你自动修 issue 的机器人”，而是“帮当前 agent 判断这个任务该不该进入受控 loop 的安全层”。
+
+### 2.2 进一步收敛：v0 不是 CLI 产品，而是 Agent Pack
 
 v0 最容易走偏的点是：把 LoopPilot 做成一个新的 CLI 或平台。那会重新发明 agent runner，也会让 Codex / Claude Code 支持变成“导出文件再复制”的二等体验。
 
