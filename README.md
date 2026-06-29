@@ -107,7 +107,7 @@ Not implemented by design:
 - No background daemon.
 - No model provider registry.
 - No scheduled loop platform or GitHub issue queue.
-- No automatic commit, push, deploy, publish, dependency installation, issue closing, PR creation, or GitHub write action.
+- No automatic commit, push, deploy, publish, dependency mutation, `package.json` edits, lockfile edits, issue closing, PR creation, or GitHub write action; dependency setup is limited to `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
 
 ## Validate This Repo
 

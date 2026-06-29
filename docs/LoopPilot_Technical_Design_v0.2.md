@@ -218,7 +218,7 @@ Return `PLAN_ONLY` when task may become a loop but should not execute yet:
 - scope is large but decomposable
 - code changes are needed but files/gate are unclear
 - test command is missing
-- dependency install is requested
+- dependency mutation is requested (`pnpm add`, package-specific `npm install xxx`, `pnpm update`, `package.json` edits, or lockfile edits); lockfile-frozen setup commands are allowed (`pnpm install --frozen-lockfile`, `npm ci`, `bun install --frozen-lockfile`)
 - risky module is involved but user asks for analysis first
 
 Output fields:
@@ -344,7 +344,7 @@ Chinese:
 | destructive action | `NO_GO` |
 | deploy/publish | `NO_GO` |
 | auth/payment code changes | `PLAN_ONLY` or `NO_GO` |
-| dependency install | `PLAN_ONLY` |
+| dependency install | allow only lockfile-frozen setup (`pnpm install --frozen-lockfile`, `npm ci`, `bun install --frozen-lockfile`); dependency mutation stays `PLAN_ONLY` |
 | commit/push request | require explicit confirmation; MVP default no |
 | max rounds missing | ask user or default to 3 |
 | unknown host capabilities | `PLAN_ONLY` |

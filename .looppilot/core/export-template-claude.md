@@ -12,7 +12,7 @@ This file is a handoff prompt, not controlled execution. Claude Code must re-run
 3. Emit schema-valid JSON first.
 4. If and only if the decision is `RUN_WITH_CONTRACT`, render the contract before action.
 5. Ask for confirmation unless the user has already explicitly confirmed the contract.
-6. Do not commit, push, deploy, publish, install dependencies, edit secrets, or broaden scope without explicit user confirmation.
+6. Do not commit, push, deploy, publish, mutate dependencies, edit `package.json`, edit lockfiles, edit secrets, or broaden scope without explicit user confirmation; dependency setup is limited to `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
 
 ## User task
 

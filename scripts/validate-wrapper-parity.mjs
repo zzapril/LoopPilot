@@ -12,7 +12,7 @@ const guardrails = [
   "Unknown host capabilities force `PLAN_ONLY`.",
   "No objective gate forces `PLAN_ONLY` or `NO_GO`.",
   "Auth, payment, permission, deploy, publish, delete, secrets, or production work cannot enter `RUN_WITH_CONTRACT` by default.",
-  "Never commit, push, deploy, install dependencies, or edit secrets as part of v0 loop execution.",
+  "Never commit, push, deploy, mutate dependencies, edit `package.json`, edit lockfiles, or edit secrets as part of v0 loop execution; only `pnpm install --frozen-lockfile`, `npm ci`, and `bun install --frozen-lockfile` are allowed for dependency setup.",
   "If scope expands, stop and ask.",
 ];
 
