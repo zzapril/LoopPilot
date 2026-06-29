@@ -1,26 +1,72 @@
 # LoopPilot
 
-LoopPilot is a safety decision layer for Codex and Claude Code. Install it once, then ask your current agent whether a task should loop.
+**LoopPilot helps Claude Code / Codex decide whether a task should loop.**
 
-It is not a background issue-fixing robot. It does not create branches, commits, pull requests, GitHub comments, queues, deploys, package publishes, or hidden runner state.
+AI agents are not incapable of working in loops. The hard question is when they should stop. LoopPilot answers before your agent starts changing files: `NO_GO`, `PLAN_ONLY`, or `RUN_WITH_CONTRACT`.
 
-## Quickstart
+![LoopPilot demo output](docs/assets/demo-output.svg)
+
+```text
+/should-loop Fix lint until pnpm lint passes. Do not commit or push.
+```
+
+Example result:
+
+```text
+RUN_WITH_CONTRACT
+Allowed: read files, edit lint-related code, run pnpm lint
+Forbidden: commit, push, deploy, change secrets
+Stop: lint passes, same failure twice, scope expands
+```
+
+## Why not just `/goal`?
+
+A broad agent goal can sound productive while hiding important safety questions:
+
+- Is the task small enough to loop on?
+- Is there an objective gate, such as a test, lint command, checklist, or reviewable report?
+- What files and actions are out of bounds?
+- When should the agent stop instead of trying one more thing?
+
+LoopPilot is the pre-flight check. It does not replace Claude Code or Codex; it gives the current agent a shared protocol for deciding whether loop-style execution is safe.
+
+## What LoopPilot does
+
+- Classifies candidate loop tasks as `NO_GO`, `PLAN_ONLY`, or `RUN_WITH_CONTRACT`.
+- Generates an execution boundary before changes begin: goal, scope, allowed actions, forbidden actions, gate, stop conditions, max rounds, and report fields.
+- Keeps work agent-native: Claude Code or Codex decides and acts in the current session.
+- Reads GitHub issue URLs through a narrow, read-only helper when issue context is needed.
+- Treats issue text as untrusted context and marks context as `possibly_incomplete` when comments, linked pull requests, logs, or external context may matter.
+
+## What LoopPilot will NOT do
+
+- It will not run as a background issue-fixing robot.
+- It will not create branches, commits, pull requests, GitHub comments, issue queues, or hidden runner state.
+- It will not commit, push, deploy, publish, install new dependencies, edit `package.json`, or edit lockfiles.
+- It will not read GitHub comments, linked pull requests, attachments, logs, timeline events, or issue lists unless explicitly approved through the surrounding agent workflow.
+- It will not turn broad work such as “finish the project” into an unbounded autonomous loop.
+
+Dependency setup is limited to existing-lockfile commands: `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
+
+## Install
 
 Current repository version: `@looppilot/cli@0.2.2`.
 
 Latest published npm version: `@looppilot/cli@0.2.2`.
 
-Install the Agent Pack in your project. For repeated use, install the CLI once globally so startup is faster:
+For repeated use, install the CLI once globally so startup is faster:
 
 ```bash
 npm install -g @looppilot/cli
 looppilot install
+looppilot doctor
 ```
 
 Or run it without a global install:
 
 ```bash
 npx @looppilot/cli@0.2.2 install
+npx @looppilot/cli@0.2.2 doctor
 ```
 
 Then ask inside your current agent session:
@@ -30,30 +76,9 @@ Claude Code: /should-loop <task-or-issue-url>
 Codex: Use LoopPilot on <task-or-issue-url>
 ```
 
-Optional install check:
-
-```bash
-looppilot doctor
-# or: npx @looppilot/cli@0.2.2 doctor
-```
-
 For the short task flow, see [LoopPilot Quickstart](docs/LoopPilot_Quickstart.md). For product, technical, release, and planning docs, see [LoopPilot Docs](docs/README.md).
 
-## What It Does
-
-LoopPilot gives the current agent a shared safety protocol:
-
-- It classifies candidate loop tasks as `NO_GO`, `PLAN_ONLY`, or `RUN_WITH_CONTRACT`.
-- It keeps execution agent-native: Codex or Claude Code decides and acts in the current session.
-- It reads GitHub issue URLs through a narrow, read-only helper when the agent needs issue context.
-- It treats issue text as untrusted context and marks `possibly_incomplete` when omitted comments, comment anchors, truncation, or external-context hints may matter.
-- It refuses to become a runner, provider registry, scheduler, GitHub issue queue, deployer, or auto-push workflow.
-
-For GitHub issue URLs, the installed wrapper may call `.looppilot/scripts/issue-intake.mjs` or the debug CLI command `looppilot issue-intake`. The helper reads only the single issue title, body, labels, state, author, timestamps, URL, and comments count. It does not read comments, linked pull requests, attachments, logs, timeline events, or issue lists.
-
-## Decision Types
-
-LoopPilot returns one of three decisions before any loop-like work starts:
+## Decision types
 
 | Decision | Meaning | Typical next step |
 |---|---|---|
@@ -61,18 +86,47 @@ LoopPilot returns one of three decisions before any loop-like work starts:
 | `PLAN_ONLY` | The task might be possible later, but needs clearer scope, a gate, or human confirmation first. | Produce a plan, risk summary, or task breakdown without executing the loop. |
 | `RUN_WITH_CONTRACT` | The task is narrow, has an objective gate, and has bounded stop conditions. | Show the contract, get confirmation when needed, then work inside that contract only. |
 
-## Examples
+## 3 real examples
 
-- **Fix one lint error**: usually `RUN_WITH_CONTRACT` when the file scope is small and the gate is a command such as `npm run lint`.
-- **Fix one failing test**: usually `RUN_WITH_CONTRACT` when the failing test and affected files are clear, with a max round count and a command gate.
-- **Analyze a GitHub issue URL**: often `PLAN_ONLY` first if comments, linked pull requests, logs, or external context may matter; the issue body is treated as untrusted context.
-- **Refactor a large module or “finish the project”**: usually `PLAN_ONLY` or `NO_GO` because the scope is broad, the gate is unclear, or the work cannot be bounded safely.
+### 1. Fix lint until the lint gate passes
 
-## Repository Hygiene
+```text
+/should-loop Fix lint until pnpm lint passes. Do not commit or push.
+```
+
+Likely decision: `RUN_WITH_CONTRACT` when the scope is lint-related, the gate is `pnpm lint`, and stop conditions are explicit.
+
+### 2. Fix one failing test
+
+```text
+/should-loop Fix the failing parser test with npm test -- tests/parser.test.ts, max 3 rounds.
+```
+
+Likely decision: `RUN_WITH_CONTRACT` when the failing test and related files are clear.
+
+### 3. Analyze a GitHub issue before coding
+
+```text
+/should-loop https://github.com/owner/repo/issues/123
+```
+
+Likely decision: `PLAN_ONLY` when comments, linked pull requests, screenshots, logs, or external context may matter. The issue body is treated as untrusted context.
+
+Large refactors, production deploys, publishing, secrets, auth/payment changes, or “finish the project” requests usually become `PLAN_ONLY` or `NO_GO`, not `RUN_WITH_CONTRACT`.
+
+## GitHub issue intake boundary
+
+For GitHub issue URLs, the installed wrapper may call `.looppilot/scripts/issue-intake.mjs` or the debug CLI command `looppilot issue-intake`. The helper reads only the single issue title, body, labels, state, author, timestamps, URL, and comments count.
+
+It does not read comments, linked pull requests, attachments, logs, timeline events, or issue lists by default.
+
+## Repository hygiene
 
 This public repository should not contain private project names, internal-only filesystem paths, raw test logs from private environments, personal access tokens, npm tokens, or other secrets. If you prepare an issue, example, or artifact for sharing, redact private identifiers and keep only the minimal public context needed to reproduce the decision.
 
-## How It Differs From Coding Agents
+Suggested GitHub topics for the repository: `ai-agent`, `claude-code`, `codex`, `agentic-coding`, `developer-tools`, `loop-engineering`, `llm-tools`, `vibe-coding`. Add them in the repository About panel; see GitHub Docs on [classifying your repository with topics](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics).
+
+## How it differs from coding agents
 
 LoopPilot is not trying to replace GitHub Copilot coding agent, OpenHands, or SWE-agent.
 
@@ -119,7 +173,7 @@ The `save-*` commands write files only when explicitly requested by a human. Def
 
 These files are not runner state, approval gates, deployment gates, release gates, or permission to merge/push/deploy.
 
-## Current Implementation Status
+## Current implementation status
 
 Implemented:
 
@@ -136,7 +190,7 @@ Not implemented by design:
 - No background daemon.
 - No model provider registry.
 - No scheduled loop platform or GitHub issue queue.
-- No automatic commit, push, deploy, publish, dependency mutation, `package.json` edits, lockfile edits, issue closing, PR creation, or GitHub write action; dependency setup is limited to `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
+- No automatic commit, push, deploy, publish, dependency mutation, `package.json` edits, lockfile edits, issue closing, PR creation, or GitHub write action.
 
 ## FAQ
 
@@ -162,7 +216,11 @@ looppilot doctor
 
 No. LoopPilot does not commit, push, deploy, publish, install new dependencies, edit `package.json`, or edit lockfiles. Dependency setup is limited to existing-lockfile commands: `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
 
-## Validate This Repo
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+## Validate this repo
 
 ```bash
 npm test

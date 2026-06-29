@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="520" viewBox="0 0 920 520" role="img" aria-labelledby="title desc">
+  <title id="title">LoopPilot demo output</title>
+  <desc id="desc">A terminal-style screenshot showing LoopPilot returning RUN_WITH_CONTRACT with allowed actions, forbidden actions, and stop conditions.</desc>
+  <rect width="920" height="520" rx="18" fill="#0d1117"/>
+  <rect x="0" y="0" width="920" height="44" rx="18" fill="#161b22"/>
+  <circle cx="26" cy="22" r="7" fill="#ff5f56"/>
+  <circle cx="50" cy="22" r="7" fill="#ffbd2e"/>
+  <circle cx="74" cy="22" r="7" fill="#27c93f"/>
+  <text x="24" y="78" fill="#8b949e" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">$ /should-loop Fix lint until pnpm lint passes. Do not commit or push.</text>
+  <text x="24" y="126" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="24" font-weight="700">RUN_WITH_CONTRACT</text>
+  <text x="24" y="168" fill="#f0f6fc" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18">Goal: Fix lint until the lint gate passes.</text>
+  <text x="24" y="214" fill="#79c0ff" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18" font-weight="700">Allowed</text>
+  <text x="48" y="244" fill="#f0f6fc" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">• read files</text>
+  <text x="48" y="272" fill="#f0f6fc" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">• edit lint-related code</text>
+  <text x="48" y="300" fill="#f0f6fc" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">• run pnpm lint</text>
+  <text x="24" y="348" fill="#ff7b72" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18" font-weight="700">Forbidden</text>
+  <text x="48" y="378" fill="#f0f6fc" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">• commit, push, deploy</text>
+  <text x="48" y="406" fill="#f0f6fc" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">• change secrets or broaden scope</text>
+  <text x="24" y="454" fill="#d2a8ff" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18" font-weight="700">Stop</text>
+  <text x="48" y="484" fill="#f0f6fc" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="17">• lint passes • same failure twice • scope expands</text>
+</svg>
