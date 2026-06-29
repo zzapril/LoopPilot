@@ -40,11 +40,14 @@ LoopPilot is the pre-flight check. It does not replace Claude Code or Codex; it 
 
 ## What LoopPilot will NOT do
 
-- It will not run as a background issue-fixing robot.
-- It will not create branches, commits, pull requests, GitHub comments, issue queues, or hidden runner state.
-- It will not commit, push, deploy, publish, install new dependencies, edit `package.json`, or edit lockfiles.
-- It will not read GitHub comments, linked pull requests, attachments, logs, timeline events, or issue lists unless explicitly approved through the surrounding agent workflow.
-- It will not turn broad work such as “finish the project” into an unbounded autonomous loop.
+LoopPilot is deliberately not an autonomous delivery platform:
+
+- ❌ No background issue-fixing robot.
+- ❌ No branches, commits, pull requests, GitHub comments, issue queues, or hidden runner state.
+- ❌ No commit, push, deploy, or publish.
+- ❌ No new dependency installs, `package.json` edits, or lockfile edits.
+- ❌ No default reading of GitHub comments, linked pull requests, attachments, logs, timeline events, or issue lists.
+- ❌ No unbounded loops for broad work such as “finish the project.”
 
 Dependency setup is limited to existing-lockfile commands: `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
 
@@ -77,6 +80,20 @@ Codex: Use LoopPilot on <task-or-issue-url>
 ```
 
 For the short task flow, see [LoopPilot Quickstart](docs/LoopPilot_Quickstart.md). For product, technical, release, and planning docs, see [LoopPilot Docs](docs/README.md).
+
+## Copy-paste prompts
+
+Use these as starting points inside your current agent session:
+
+```text
+/should-loop Fix lint until pnpm lint passes. Do not commit or push.
+
+/should-loop Fix the failing test with npm test -- tests/parser.test.ts. Max 3 rounds.
+
+/should-loop Analyze this issue first and tell me whether it is safe to loop: https://github.com/owner/repo/issues/123
+
+/should-loop Break this refactor into a safe plan only. Do not edit files yet.
+```
 
 ## Decision types
 
