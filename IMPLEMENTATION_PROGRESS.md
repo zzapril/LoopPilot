@@ -22,6 +22,7 @@ Last updated: 2026-06-28
 - [x] GitHub Actions CI configured to mirror the local release gate on push and pull requests.
 - [x] `0.2.1` UX simplification: default install/doctor path, beginner-friendly help, and `help advanced` for helper/debug commands.
 - [x] `0.2.2` documentation hotfix: npm package README and Quickstart point to the current published install version.
+- [x] `0.2.3` release: frozen dependency setup guardrails and refreshed public README positioning.
 
 ## v1 Manual Artifact Progress
 
@@ -37,6 +38,7 @@ Last updated: 2026-06-28
 - [x] `0.2.0` published to npm with GitHub issue intake.
 - [x] `0.2.1` published to npm with simpler install/help UX.
 - [x] `0.2.2` published to npm as a documentation hotfix for package-page install accuracy.
+- [x] `0.2.3` published to npm with dependency mutation guardrails and README launch positioning.
 - [x] Final local verification, GitHub Actions CI, registry verification, npx install/doctor, and Claude Code smoke test passed.
 
 ## Notes

@@ -6,11 +6,11 @@ This directory contains product, technical, release, and future-planning notes. 
 2. `LoopPilot_PRD_v0.2.md` - product scope and non-goals.
 3. `LoopPilot_Technical_Design_v0.2.md` - implementation shape and safety boundaries.
 4. `LoopPilot_Reusable_Artifacts_v1.md` - optional manual artifacts: `VISION.md`, `STATE.md`, `RUN_LOG.md`, and review-gate evidence.
-5. `release-checklist.md`, `release-notes-0.1.0.md`, `release-notes-0.2.0.md`, `release-notes-0.2.1.md`, and `release-notes-0.2.2.md` - published release records.
+5. `release-checklist.md`, `release-notes-0.1.0.md`, `release-notes-0.2.0.md`, `release-notes-0.2.1.md`, `release-notes-0.2.2.md`, and `release-notes-0.2.3.md` - published release records.
 6. `LoopPilot_Implementation_Status_and_Plan_v0.2.md` - audit log of what is implemented and verified.
 7. `launch-notes.md` - short external positioning copy for explaining LoopPilot as a stopping-boundary tool.
 
-The v2 orchestration documents now authorize only the narrow agent-native single issue intake implemented for `0.2.0`. The `0.2.1`/`0.2.2` line simplifies the user-facing install/help path without adding a runner, provider registry, GitHub queue, scheduler, hooks integration, automatic resume, or `looppilot run`.
+The v2 orchestration documents now authorize only the narrow agent-native single issue intake implemented for `0.2.0`. The `0.2.1` through `0.2.3` line simplifies the user-facing install/help path and tightens dependency mutation guardrails without adding a runner, provider registry, GitHub queue, scheduler, hooks integration, automatic resume, or `looppilot run`.
 
 Current release-ready surface:
 

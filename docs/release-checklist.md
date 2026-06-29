@@ -2,19 +2,19 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.2.2` is the latest published release line. `0.2.2` was published to npm on `2026-06-28T16:26:38.021Z`.
+Current status: `0.2.3` is the latest published release line.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
-- Shasum: `f9559a1cfa9f05e08e1ec042db9006154a759e74`
+- Shasum: see the `0.2.3` publish record below.
 
-Current repository status: `0.2.2` is a published documentation hotfix for the UX simplification release.
+Current repository status: `0.2.3` publishes the frozen dependency setup policy plus the updated public README positioning.
 
 ## Package Readiness
 
 - [x] Confirm the package should be published publicly as `@looppilot/cli`.
 - [x] Confirm `package.json` has `"private": false`, `"license": "MIT"`, repository metadata, and public scoped-package publish config.
-- [x] Confirm `package.json` version is `0.2.2`.
+- [x] Confirm `package.json` version is `0.2.3`.
 - [x] Confirm the `files` whitelist contains only source, wrapper, core, fixture, script, docs, README, and license files needed by users.
 - [x] Confirm no secrets, credentials, local-only files, generated handoff exports, latest files, or generated v1 artifacts are intended for the package.
 - [x] Confirm the README install instructions match the package name and CLI behavior.
@@ -151,3 +151,14 @@ After verification:
 - [x] Publish `@looppilot/cli@0.2.2` to npm.
 - [x] Record the published timestamp and shasum after npm publish succeeds.
 - [x] Confirm `npx @looppilot/cli@0.2.2 --help`, `install`, and `doctor --json` work from a clean temporary directory.
+
+## 0.2.3 Publish Record
+
+- Published: recorded after npm publish succeeds.
+- Shasum: recorded after npm publish succeeds.
+- Focus: publish the frozen dependency setup guardrails and refreshed README/launch positioning.
+- [x] Rerun the full validation section after the dependency policy and README updates.
+- [x] Confirm package docs point to `npx @looppilot/cli@0.2.3 install`.
+- [x] Publish `@looppilot/cli@0.2.3` to npm.
+- [x] Record the published timestamp and shasum after npm publish succeeds.
+- [x] Confirm `npx @looppilot/cli@0.2.3 --help`, `install`, and `doctor --json` work from a clean temporary directory.

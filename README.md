@@ -53,9 +53,9 @@ Dependency setup is limited to existing-lockfile commands: `pnpm install --froze
 
 ## Install
 
-Current repository version: `@looppilot/cli@0.2.2`.
+Current repository version: `@looppilot/cli@0.2.3`.
 
-Latest published npm version: `@looppilot/cli@0.2.2`.
+Latest published npm version: `@looppilot/cli@0.2.3`.
 
 For repeated use, install the CLI once globally so startup is faster:
 
@@ -68,8 +68,8 @@ looppilot doctor
 Or run it without a global install:
 
 ```bash
-npx @looppilot/cli@0.2.2 install
-npx @looppilot/cli@0.2.2 doctor
+npx @looppilot/cli@0.2.3 install
+npx @looppilot/cli@0.2.3 doctor
 ```
 
 Then ask inside your current agent session:
