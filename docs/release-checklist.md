@@ -2,11 +2,11 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.2.3` is the latest published release line.
+Current status: `0.2.3` is the latest published release line. `0.2.3` was published to npm on `2026-06-29T15:36:05.503Z`.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
-- Shasum: see the `0.2.3` publish record below.
+- Shasum: `41eb28ba38bdb515f3be7661657851c4b035fbee`
 
 Current repository status: `0.2.3` publishes the frozen dependency setup policy plus the updated public README positioning.
 
@@ -154,8 +154,8 @@ After verification:
 
 ## 0.2.3 Publish Record
 
-- Published: recorded after npm publish succeeds.
-- Shasum: recorded after npm publish succeeds.
+- Published: `2026-06-29T15:36:05.503Z`
+- Shasum: `41eb28ba38bdb515f3be7661657851c4b035fbee`
 - Focus: publish the frozen dependency setup guardrails and refreshed README/launch positioning.
 - [x] Rerun the full validation section after the dependency policy and README updates.
 - [x] Confirm package docs point to `npx @looppilot/cli@0.2.3 install`.
