@@ -44,7 +44,7 @@ If host capabilities are unknown, return `PLAN_ONLY`.
 | destructive action | `NO_GO` |
 | production deploy or publish | `NO_GO` |
 | auth/payment/permission code changes | `PLAN_ONLY` or `NO_GO` |
-| dependency install | `PLAN_ONLY` unless explicitly confirmed |
+| dependency install | allow only lockfile-frozen installs (`pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`); dependency mutation remains `PLAN_ONLY` |
 | commit/push request | require explicit confirmation; v0 default no |
 | missing max rounds | ask once or default to 3 |
 | unknown host capabilities | `PLAN_ONLY` |
@@ -90,10 +90,16 @@ Every `RUN_WITH_CONTRACT` contract must include:
 Forbidden actions must include at least:
 
 - edit secrets
-- install dependencies without confirmation
+- dependency mutation: `pnpm add`, package-specific `npm install xxx`, `pnpm update`, changes to `package.json`, or changes to lockfiles
 - git commit
 - git push
 - deploy
+
+Allowed dependency setup is limited to lockfile-frozen installs:
+
+- `pnpm install --frozen-lockfile`
+- `npm ci`
+- `bun install --frozen-lockfile`
 
 ## File Policy
 
