@@ -67,11 +67,12 @@ Allowed:
 - Read relevant files.
 - Make small scoped edits.
 - Run the declared gate command.
+- Run only these lockfile-frozen dependency setup commands when needed: `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
 
 Forbidden:
 - Read or edit secrets.
 - Change auth/payment/permission logic unless explicitly scoped and confirmed.
-- Install dependencies without confirmation.
+- Mutate dependencies with `pnpm add`, package-specific `npm install xxx`, `pnpm update`, changes to `package.json`, or changes to lockfiles.
 - Commit, push, deploy, or publish.
 
 Gate:

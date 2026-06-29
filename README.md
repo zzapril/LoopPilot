@@ -10,7 +10,14 @@ Current repository version: `@looppilot/cli@0.2.2`.
 
 Latest published npm version: `@looppilot/cli@0.2.2`.
 
-Install the Agent Pack in your project:
+Install the Agent Pack in your project. For repeated use, install the CLI once globally so startup is faster:
+
+```bash
+npm install -g @looppilot/cli
+looppilot install
+```
+
+Or run it without a global install:
 
 ```bash
 npx @looppilot/cli@0.2.2 install
@@ -26,7 +33,8 @@ Codex: Use LoopPilot on <task-or-issue-url>
 Optional install check:
 
 ```bash
-npx @looppilot/cli@0.2.2 doctor
+looppilot doctor
+# or: npx @looppilot/cli@0.2.2 doctor
 ```
 
 For the short task flow, see [LoopPilot Quickstart](docs/LoopPilot_Quickstart.md). For product, technical, release, and planning docs, see [LoopPilot Docs](docs/README.md).
@@ -42,6 +50,27 @@ LoopPilot gives the current agent a shared safety protocol:
 - It refuses to become a runner, provider registry, scheduler, GitHub issue queue, deployer, or auto-push workflow.
 
 For GitHub issue URLs, the installed wrapper may call `.looppilot/scripts/issue-intake.mjs` or the debug CLI command `looppilot issue-intake`. The helper reads only the single issue title, body, labels, state, author, timestamps, URL, and comments count. It does not read comments, linked pull requests, attachments, logs, timeline events, or issue lists.
+
+## Decision Types
+
+LoopPilot returns one of three decisions before any loop-like work starts:
+
+| Decision | Meaning | Typical next step |
+|---|---|---|
+| `NO_GO` | The task is too risky or out of scope for a bounded agent loop. | Use a safer manual or planning workflow instead. |
+| `PLAN_ONLY` | The task might be possible later, but needs clearer scope, a gate, or human confirmation first. | Produce a plan, risk summary, or task breakdown without executing the loop. |
+| `RUN_WITH_CONTRACT` | The task is narrow, has an objective gate, and has bounded stop conditions. | Show the contract, get confirmation when needed, then work inside that contract only. |
+
+## Examples
+
+- **Fix one lint error**: usually `RUN_WITH_CONTRACT` when the file scope is small and the gate is a command such as `npm run lint`.
+- **Fix one failing test**: usually `RUN_WITH_CONTRACT` when the failing test and affected files are clear, with a max round count and a command gate.
+- **Analyze a GitHub issue URL**: often `PLAN_ONLY` first if comments, linked pull requests, logs, or external context may matter; the issue body is treated as untrusted context.
+- **Refactor a large module or “finish the project”**: usually `PLAN_ONLY` or `NO_GO` because the scope is broad, the gate is unclear, or the work cannot be bounded safely.
+
+## Repository Hygiene
+
+This public repository should not contain private project names, internal-only filesystem paths, raw test logs from private environments, personal access tokens, npm tokens, or other secrets. If you prepare an issue, example, or artifact for sharing, redact private identifiers and keep only the minimal public context needed to reproduce the decision.
 
 ## How It Differs From Coding Agents
 
@@ -107,7 +136,31 @@ Not implemented by design:
 - No background daemon.
 - No model provider registry.
 - No scheduled loop platform or GitHub issue queue.
-- No automatic commit, push, deploy, publish, dependency installation, issue closing, PR creation, or GitHub write action.
+- No automatic commit, push, deploy, publish, dependency mutation, `package.json` edits, lockfile edits, issue closing, PR creation, or GitHub write action; dependency setup is limited to `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
+
+## FAQ
+
+### Is LoopPilot a mature autonomous coding product?
+
+No. Treat LoopPilot `0.2.x` as an early project and a safety protocol for current Codex or Claude Code sessions, not as a mature background automation platform.
+
+### Does LoopPilot automatically fix issues or run tasks to completion?
+
+No. It does not watch issue queues, assign work to a cloud runner, or promise to finish tasks automatically. It helps the current agent decide whether a bounded loop is safe, and only `RUN_WITH_CONTRACT` tasks may proceed under explicit limits.
+
+### Why is `npx @looppilot/cli` slow?
+
+`npx` may fetch and initialize the package each time. If you use LoopPilot more than once, prefer a global install:
+
+```bash
+npm install -g @looppilot/cli
+looppilot install
+looppilot doctor
+```
+
+### Will LoopPilot commit, push, deploy, or install new dependencies?
+
+No. LoopPilot does not commit, push, deploy, publish, install new dependencies, edit `package.json`, or edit lockfiles. Dependency setup is limited to existing-lockfile commands: `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
 
 ## Validate This Repo
 

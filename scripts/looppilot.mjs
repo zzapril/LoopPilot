@@ -59,7 +59,7 @@ Agent usage:
 Notes:
   install copies the Codex and Claude Code Agent Pack into this project.
   doctor verifies the installed files and safety fixtures.
-  LoopPilot does not run background loops, commit, push, deploy, publish, or install dependencies.
+  LoopPilot does not run background loops, commit, push, deploy, publish, or mutate dependencies. Dependency setup is limited to pnpm install --frozen-lockfile, npm ci, or bun install --frozen-lockfile.
   Advanced/debug commands are available with: looppilot help advanced
 `);
 }
