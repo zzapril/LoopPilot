@@ -155,7 +155,7 @@ await withServer({
   assert(parsed.source.comments_count === 0, "json comments_count should be normalized to a non-negative integer");
   assert(parsed.context.status === "issue_only", "json should be issue_only when no warnings");
   assert(parsed.context.not_read.includes("linked_pull_requests"), "json not_read missing linked_pull_requests");
-  assert(requestLog[0]?.headers.authorization === `Bearer ${primaryToken}`, "GITHUB_TOKEN did not take precedence");
+  assert(!requestLog[0]?.headers.authorization, "custom API base should not receive GITHUB_TOKEN authorization");
   assert(!result.stdout.includes(primaryToken) && !result.stderr.includes(primaryToken), "primary token leaked to output");
   assertNoHeavyEndpoints(requestLog, "json success");
 });
@@ -168,9 +168,21 @@ await withServer({
   });
   assert(result.status === 0, `GH_TOKEN fallback failed: ${result.stderr || result.stdout}`);
   if (result.status !== 0) return;
-  assert(requestLog[0]?.headers.authorization === `Bearer ${fallbackToken}`, "GH_TOKEN fallback was not used");
+  assert(!requestLog[0]?.headers.authorization, "custom API base should not receive GH_TOKEN authorization");
   assert(!result.stdout.includes(fallbackToken) && !result.stderr.includes(fallbackToken), "fallback token leaked to output");
 });
+
+for (const [baseUrl, expected] of [
+  ["https://evil.example.test", "may only point to https://api.github.com or a loopback test server"],
+  ["http://example.com", "may only point to https://api.github.com or a loopback test server"],
+]) {
+  const result = await run(["issue-intake", "--repo", "acme/widgets", "--number", "123"], baseUrl, {
+    GITHUB_TOKEN: primaryToken,
+  });
+  assert(result.status !== 0, `${baseUrl} should fail before making a request`);
+  assert(result.stderr.includes(expected), `${baseUrl} expected ${expected}, got ${result.stderr.trim()}`);
+  assert(!result.stdout.includes(primaryToken) && !result.stderr.includes(primaryToken), `${baseUrl} leaked token to output`);
+}
 
 await withServer({
   "/repos/acme/widgets/issues/124": [200, issue({

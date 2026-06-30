@@ -169,8 +169,33 @@ function githubApiBaseUrl() {
   return process.env.LOOPPILOT_GITHUB_API_BASE_URL || "https://api.github.com";
 }
 
+function isLoopbackHostname(hostname) {
+  const normalized = hostname.toLowerCase();
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "[::1]" || normalized === "::1";
+}
+
+function isGitHubDotComApi(url) {
+  return url.protocol === "https:" && url.hostname.toLowerCase() === "api.github.com";
+}
+
+function normalizeGitHubApiBaseUrl() {
+  let base;
+  try {
+    base = new URL(githubApiBaseUrl());
+  } catch {
+    throw new Error("LOOPPILOT_GITHUB_API_BASE_URL must be a valid URL.");
+  }
+
+  if (isGitHubDotComApi(base)) return base;
+  if ((base.protocol === "http:" || base.protocol === "https:") && isLoopbackHostname(base.hostname)) return base;
+
+  throw new Error(
+    "LOOPPILOT_GITHUB_API_BASE_URL may only point to https://api.github.com or a loopback test server.",
+  );
+}
+
 function buildGitHubIssueUrl(issueRef) {
-  const base = new URL(githubApiBaseUrl());
+  const base = normalizeGitHubApiBaseUrl();
   const owner = encodeURIComponent(issueRef.owner);
   const repo = encodeURIComponent(issueRef.repo);
   base.pathname = `${base.pathname.replace(/\/$/, "")}/repos/${owner}/${repo}/issues/${issueRef.number}`;
@@ -183,6 +208,13 @@ function githubToken() {
 }
 
 function requestJson(url, headers) {
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new Error("GitHub API requests must use http or https.");
+  }
+  if (url.protocol === "http:" && !isLoopbackHostname(url.hostname)) {
+    throw new Error("GitHub API requests over http are only allowed for loopback test servers.");
+  }
+
   const client = url.protocol === "http:" ? http : https;
   const requestOptions = {
     protocol: url.protocol,
@@ -242,15 +274,16 @@ function githubStatusError(statusCode, headers) {
 }
 
 async function fetchGitHubIssue(issueRef) {
+  const url = buildGitHubIssueUrl(issueRef);
   const headers = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
     "User-Agent": "looppilot-cli",
   };
   const token = githubToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (token && isGitHubDotComApi(url)) headers.Authorization = `Bearer ${token}`;
 
-  const response = await requestJson(buildGitHubIssueUrl(issueRef), headers);
+  const response = await requestJson(url, headers);
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw new Error(githubStatusError(response.statusCode, response.headers));
   }
