@@ -2,11 +2,11 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.2.4` is the latest published release line.
+Current status: `0.2.4` is the latest published release line. `0.2.4` was published to npm on `2026-06-30T15:15:57.875Z`.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
-- Shasum: see the `0.2.4` publish record below.
+- Shasum: `9251f12b7e4179fb546ea0336cc9c99cde044398`
 
 Current repository status: `0.2.4` fixes issue-intake token handling for custom API base URLs.
 
@@ -165,8 +165,8 @@ After verification:
 
 ## 0.2.4 Publish Record
 
-- Published: recorded after npm publish succeeds.
-- Shasum: recorded after npm publish succeeds.
+- Published: `2026-06-30T15:15:57.875Z`
+- Shasum: `9251f12b7e4179fb546ea0336cc9c99cde044398`
 - Focus: prevent issue-intake from sending GitHub tokens to custom API base URLs.
 - [x] Rerun the full validation section after the issue-intake token handling fix.
 - [x] Confirm custom issue-intake API base URLs do not receive `GITHUB_TOKEN` or `GH_TOKEN`.
