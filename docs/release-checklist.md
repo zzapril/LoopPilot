@@ -2,19 +2,19 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.2.3` is the latest published release line. `0.2.3` was published to npm on `2026-06-29T15:36:05.503Z`.
+Current status: `0.2.4` is the latest published release line.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
-- Shasum: `41eb28ba38bdb515f3be7661657851c4b035fbee`
+- Shasum: see the `0.2.4` publish record below.
 
-Current repository status: `0.2.3` publishes the frozen dependency setup policy plus the updated public README positioning.
+Current repository status: `0.2.4` fixes issue-intake token handling for custom API base URLs.
 
 ## Package Readiness
 
 - [x] Confirm the package should be published publicly as `@looppilot/cli`.
 - [x] Confirm `package.json` has `"private": false`, `"license": "MIT"`, repository metadata, and public scoped-package publish config.
-- [x] Confirm `package.json` version is `0.2.3`.
+- [x] Confirm `package.json` version is `0.2.4`.
 - [x] Confirm the `files` whitelist contains only source, wrapper, core, fixture, script, docs, README, and license files needed by users.
 - [x] Confirm no secrets, credentials, local-only files, generated handoff exports, latest files, or generated v1 artifacts are intended for the package.
 - [x] Confirm the README install instructions match the package name and CLI behavior.
@@ -162,3 +162,14 @@ After verification:
 - [x] Publish `@looppilot/cli@0.2.3` to npm.
 - [x] Record the published timestamp and shasum after npm publish succeeds.
 - [x] Confirm `npx @looppilot/cli@0.2.3 --help`, `install`, and `doctor --json` work from a clean temporary directory.
+
+## 0.2.4 Publish Record
+
+- Published: recorded after npm publish succeeds.
+- Shasum: recorded after npm publish succeeds.
+- Focus: prevent issue-intake from sending GitHub tokens to custom API base URLs.
+- [x] Rerun the full validation section after the issue-intake token handling fix.
+- [x] Confirm custom issue-intake API base URLs do not receive `GITHUB_TOKEN` or `GH_TOKEN`.
+- [x] Publish `@looppilot/cli@0.2.4` to npm.
+- [x] Record the published timestamp and shasum after npm publish succeeds.
+- [x] Confirm `npx @looppilot/cli@0.2.4 --help`, `install`, and `doctor --json` work from a clean temporary directory.

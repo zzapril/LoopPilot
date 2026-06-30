@@ -1,6 +1,6 @@
 {
   "name": "@looppilot/cli",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "private": false,
   "type": "module",
   "description": "Agent-native loop qualification pack for Codex and Claude Code.",

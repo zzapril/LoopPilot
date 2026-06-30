@@ -23,6 +23,7 @@ Last updated: 2026-06-28
 - [x] `0.2.1` UX simplification: default install/doctor path, beginner-friendly help, and `help advanced` for helper/debug commands.
 - [x] `0.2.2` documentation hotfix: npm package README and Quickstart point to the current published install version.
 - [x] `0.2.3` release: frozen dependency setup guardrails and refreshed public README positioning.
+- [x] `0.2.4` security fix: issue-intake only sends GitHub tokens to the official GitHub API and rejects non-loopback custom API base URLs.
 
 ## v1 Manual Artifact Progress
 
@@ -39,6 +40,7 @@ Last updated: 2026-06-28
 - [x] `0.2.1` published to npm with simpler install/help UX.
 - [x] `0.2.2` published to npm as a documentation hotfix for package-page install accuracy.
 - [x] `0.2.3` published to npm with dependency mutation guardrails and README launch positioning.
+- [x] `0.2.4` published to npm with issue-intake token leak hardening.
 - [x] Final local verification, GitHub Actions CI, registry verification, npx install/doctor, and Claude Code smoke test passed.
 
 ## Notes

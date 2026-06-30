@@ -70,6 +70,7 @@ if (result.status !== 0) {
       "docs/release-notes-0.2.1.md",
       "docs/release-notes-0.2.2.md",
       "docs/release-notes-0.2.3.md",
+      "docs/release-notes-0.2.4.md",
       "IMPLEMENTATION_PROGRESS.md",
       "README.md",
       "LICENSE",

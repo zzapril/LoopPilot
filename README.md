@@ -53,9 +53,9 @@ Dependency setup is limited to existing-lockfile commands: `pnpm install --froze
 
 ## Install
 
-Current repository version: `@looppilot/cli@0.2.3`.
+Current repository version: `@looppilot/cli@0.2.4`.
 
-Latest published npm version: `@looppilot/cli@0.2.3`.
+Latest published npm version: `@looppilot/cli@0.2.4`.
 
 Recommended path:
 
@@ -68,8 +68,8 @@ looppilot doctor
 For a one-off trial:
 
 ```bash
-npx @looppilot/cli@0.2.3 install
-npx @looppilot/cli@0.2.3 doctor
+npx @looppilot/cli@0.2.4 install
+npx @looppilot/cli@0.2.4 doctor
 ```
 
 If `npx` keeps spinning, use the global install path above.
