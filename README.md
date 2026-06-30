@@ -57,7 +57,7 @@ Current repository version: `@looppilot/cli@0.2.3`.
 
 Latest published npm version: `@looppilot/cli@0.2.3`.
 
-For repeated use, install the CLI once globally so startup is faster:
+Recommended path:
 
 ```bash
 npm install -g @looppilot/cli
@@ -65,12 +65,14 @@ looppilot install
 looppilot doctor
 ```
 
-Or run it without a global install:
+For a one-off trial:
 
 ```bash
 npx @looppilot/cli@0.2.3 install
 npx @looppilot/cli@0.2.3 doctor
 ```
+
+If `npx` keeps spinning, use the global install path above.
 
 Then ask inside your current agent session:
 

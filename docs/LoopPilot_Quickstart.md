@@ -8,13 +8,24 @@ Latest published npm version: `@looppilot/cli@0.2.3`.
 
 ## 1. Install Once
 
-Install:
+Recommended path:
 
 ```bash
-npx @looppilot/cli@0.2.3 install
+npm install -g @looppilot/cli
+looppilot install
+looppilot doctor
 ```
 
 The default install target is both Codex and Claude Code for the current project. Advanced users can still override target, scope, cwd, force, or dry-run behavior with `looppilot help advanced`.
+
+For a one-off trial:
+
+```bash
+npx @looppilot/cli@0.2.3 install
+npx @looppilot/cli@0.2.3 doctor
+```
+
+If `npx` keeps spinning, use the global install path above.
 
 ## 2. Ask In The Agent
 
@@ -48,7 +59,7 @@ LoopPilot returns one of three outcomes before loop-like execution:
 If install looks wrong, run:
 
 ```bash
-npx @looppilot/cli@0.2.3 doctor
+looppilot doctor
 ```
 
 `doctor` checks installed files, fixture/schema compatibility, wrapper references, wrapper parity, and installed file hashes. It does not run a loop.

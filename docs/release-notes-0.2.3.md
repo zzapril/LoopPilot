@@ -11,7 +11,8 @@ Status: published to npm.
 - Publishes the frozen dependency setup policy across LoopPilot wrappers, contracts, export handoffs, docs, and CLI/help text.
 - Keeps dependency mutation out of bounded loops: no new dependency installs, package-specific installs, dependency updates, `package.json` edits, or lockfile edits.
 - Allows only existing-lockfile setup commands: `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
-- Current install command: `npx @looppilot/cli@0.2.3 install`.
+- Recommended install path: `npm install -g @looppilot/cli`, then `looppilot install` and `looppilot doctor`.
+- One-off trial command: `npx @looppilot/cli@0.2.3 install`. If `npx` keeps spinning, use the global install path.
 - Refreshes the README around the loop-decision/stopping-boundary story, adds the demo output asset, and includes short launch notes.
 - Keeps the core UX unchanged:
   - `looppilot install`
