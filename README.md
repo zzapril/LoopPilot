@@ -14,6 +14,7 @@ Example result:
 
 ```text
 RUN_WITH_CONTRACT
+Surface: goal
 Allowed: read files, edit lint-related code, run pnpm lint
 Forbidden: commit, push, deploy, change secrets
 Stop: lint passes, same failure twice, scope expands
@@ -260,7 +261,7 @@ Not implemented by design:
 
 ### Is LoopPilot a mature autonomous coding product?
 
-No. Treat LoopPilot `0.2.x` as an early project and a safety protocol for current Codex or Claude Code sessions, not as a mature background automation platform.
+No. Treat LoopPilot as an early project and a safety protocol for current Codex or Claude Code sessions, not as a mature background automation platform.
 
 ### Does LoopPilot automatically fix issues or run tasks to completion?
 
