@@ -6,6 +6,7 @@
   "additionalProperties": false,
   "required": [
     "decision",
+    "recommended_surface",
     "confidence",
     "needs_clarification",
     "clarifying_question",
@@ -20,6 +21,9 @@
   "properties": {
     "decision": {
       "enum": ["NO_GO", "PLAN_ONLY", "RUN_WITH_CONTRACT"]
+    },
+    "recommended_surface": {
+      "enum": ["manual", "plan", "goal", "loop", "routine"]
     },
     "confidence": {
       "enum": ["low", "medium", "high"]

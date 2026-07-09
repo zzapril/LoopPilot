@@ -15,7 +15,7 @@
 当前代码已经完成了 **LoopPilot v0：Agent-native loop-check** 的核心交付形态，并继续补齐了本文档先前列出的主要未完成项：
 
 - 已有共享 core：规则、decision schema、contract template。
-- 已有 45 条 decision fixtures，并按 `NO_GO` / `PLAN_ONLY` / `RUN_WITH_CONTRACT` 各 15 条分布。
+- 已有 49 条 decision fixtures，覆盖 `NO_GO`、`PLAN_ONLY`、`RUN_WITH_CONTRACT`，并包含 Claude Code `/loop`-aware `recommended_surface` 示例。
 - 已有 Codex 与 Claude Code wrapper，并且 wrapper 明确引用共享 core，不复制规则。
 - 已有 Claude Code command alias。
 - 已有 fixture validator、wrapper validator、统一 test 命令。
@@ -40,7 +40,7 @@
 | JSON first | 每次判断先输出可校验 JSON | 已在规则和 wrapper 中要求 | qualification rules、Codex/Claude wrapper 均写明 | v0 完成，需继续用测试约束 |
 | Host capability gate | host 能力未知不能 `RUN_WITH_CONTRACT` | 已完成 | core 规则、schema、validator 均检查 `capability_confidence` | v0 完成 |
 | Contract template | `RUN_WITH_CONTRACT` 必须显示 contract | 已完成 | contract template 已存在 | v0 完成 |
-| 45 fixtures | 至少 45 条，三类各 15 条 | 已完成 | `.looppilot/fixtures/decision-fixtures.jsonl` 有 45 行 | v0 完成 |
+| 49 fixtures | 至少 45 条，三类各 15 条 | 已完成 | `.looppilot/fixtures/decision-fixtures.jsonl` 有 49 行 | v0 完成 |
 | Fixture validator | 校验 schema 与 expected fields | 已完成 | `scripts/validate-fixtures.mjs`、`scripts/validate-schema.mjs` 与 `decision-validator.mjs` | v0 完成 |
 | Wrapper parity | Codex 与 Claude Code 同一任务 decision 一致 | 已增强 | `scripts/validate-wrapper-parity.mjs` 检查 workflow 与 guardrails 同构，`npm run eval:wrapper-parity` 校验 golden output safety fields | v0 完成 |
 | Codex wrapper | `.agents/skills/looppilot/SKILL.md` | 已完成 | 文件存在并引用 core | v0 完成 |
@@ -83,11 +83,12 @@
 
 ### 3.2 Decision fixtures
 
-当前 `.looppilot/fixtures/decision-fixtures.jsonl` 有 45 行 fixture，满足 PRD 和技术设计要求：
+当前 `.looppilot/fixtures/decision-fixtures.jsonl` 有 49 行 fixture，满足 PRD 和技术设计要求：
 
 - 15 个 `NO_GO`
-- 15 个 `PLAN_ONLY`
-- 15 个 `RUN_WITH_CONTRACT`
+- 17 个 `PLAN_ONLY`
+- 17 个 `RUN_WITH_CONTRACT`
+- 覆盖 `recommended_surface` 的 `manual`、`plan`、`goal`、`loop`、`routine` 示例
 
 完成点：
 
@@ -160,7 +161,7 @@ scripts/looppilot.mjs
 完成点：
 
 - `npm test` 会顺序运行 schema、Ajv cross-check、fixture、wrapper、wrapper parity、scan summary、安全 scan、host/Claude helper、export template、fixture coverage、export command、save command、manual template、review-gate template、package contents、docs consistency、CLI args 和 install/doctor validation。
-- `validate-fixtures.mjs` 检查 45 fixtures、三类各 15 条、decision 字段、安全 contract 不变量。
+- `validate-fixtures.mjs` 检查至少 45 fixtures、三类各至少 15 条、decision 字段、安全 contract 不变量。
 - `validate-schema.mjs` 检查 schema drift，并使用本地 runtime JSON Schema evaluator 对 fixture decisions 做 schema-compatible validation。
 - `validate-wrappers.mjs` 检查 wrappers 是否引用 core、是否有正确 host profile、是否要求 JSON first。
 - `validate-wrapper-parity.mjs` 检查 Codex / Claude wrapper workflow 和 guardrails 是否同构。
@@ -191,7 +192,7 @@ scripts/looppilot.mjs
 已新增：
 
 - `scripts/lib/schema-validator.mjs`：检查 decision schema 与本地安全 validator 的 required fields、enum、contract required fields 是否漂移。
-- `scripts/validate-schema.mjs`：对 45 条 fixtures 的 `expected_decision` 做 schema-compatible validation。
+- `scripts/validate-schema.mjs`：对 49 条 fixtures 的 `expected_decision` 做 schema-compatible validation。
 - `scripts/validate-schema-ajv.mjs`：用 Ajv 对 fixtures 做交叉校验，避免本地 evaluator 与标准 JSON Schema 行为长期漂移。
 - `npm test` 已纳入 schema validation。
 
@@ -478,7 +479,7 @@ node scripts/looppilot.mjs install --target both --scope project --dry-run
 
 质量门禁：
 
-- fixtures 恰好 45 条或随版本明确增加。
+- fixtures 至少 45 条，且随版本明确增加。
 - 三类 decision 分布符合当前版本约定。
 - `RUN_WITH_CONTRACT` 无缺 gate、stop conditions、known host capabilities 的情况。
 - wrapper parity 通过。
@@ -528,7 +529,7 @@ node scripts/looppilot.mjs install --target both --scope project --dry-run
 - [x] 共享 core 存在。
 - [x] decision schema 存在。
 - [x] contract template 存在。
-- [x] 45 fixtures 存在。
+- [x] 49 fixtures 存在。
 - [x] Codex wrapper 存在。
 - [x] Claude wrapper 存在。
 - [x] Claude command alias 存在且不复制规则。
@@ -590,8 +591,8 @@ git diff --check
 ```text
 npm test:
 - Schema validation passed.
-- Ajv schema validation passed for 45 fixtures and 7 negative probes.
-- Fixture distribution: 15 NO_GO, 15 PLAN_ONLY, 15 RUN_WITH_CONTRACT.
+- Ajv schema validation passed for 49 fixtures and negative probes.
+- Fixture distribution: 15 NO_GO, 17 PLAN_ONLY, 17 RUN_WITH_CONTRACT.
 - Wrapper, wrapper parity, scan, scan security, Claude project summary, host capability summary, export, fixture coverage, save command, manual template, review-gate template, package contents/runtime smoke, docs consistency, install, and CLI argument validation passed.
 
 eval:wrapper-parity:

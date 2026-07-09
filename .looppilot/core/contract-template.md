@@ -7,6 +7,7 @@ Render this contract before a `RUN_WITH_CONTRACT` task starts. The current agent
 ```json
 {
   "decision": "RUN_WITH_CONTRACT",
+  "recommended_surface": "goal",
   "confidence": "high",
   "needs_clarification": false,
   "clarifying_question": null,

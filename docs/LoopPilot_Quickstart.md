@@ -1,8 +1,8 @@
 # LoopPilot Quickstart
 
-LoopPilot should feel like a safety button inside Claude Code or Codex: install once, then ask whether a task should loop.
+LoopPilot should feel like a safety button inside Claude Code or Codex: install once, then ask whether a task should loop and which agent execution surface it should use.
 
-Current repository version: `@looppilot/cli@0.2.4`.
+Current repository version: `@looppilot/cli@0.3.0`.
 
 Latest published npm version: `@looppilot/cli@0.2.4`.
 
@@ -53,6 +53,14 @@ LoopPilot returns one of three outcomes before loop-like execution:
 - `NO_GO`: too risky or outside the safe surface.
 - `PLAN_ONLY`: write a plan or ask for confirmation before execution.
 - `RUN_WITH_CONTRACT`: execute only within the stated bounds, gate, stop conditions, and forbidden actions.
+
+It also returns `recommended_surface`: `manual`, `plan`, `goal`, `loop`, or `routine`.
+
+## Claude Code `/loop`
+
+Claude Code `/loop` answers how to run a prompt again later. LoopPilot answers whether the task should enter a loop at all.
+
+LoopPilot does not replace Claude Code `/loop`. It helps decide when `/loop` is the right surface, especially for safe tasks that need to wait for external state such as CI, deploy status, PR review, issue updates, or queue status. Local lint/test/typecheck fixes usually fit `recommended_surface: "goal"` instead.
 
 ## 3. Verify If Needed
 

@@ -1,10 +1,10 @@
 # LoopPilot Implementation Progress
 
-Last updated: 2026-06-28
+Last updated: 2026-07-09
 
 ## Feature Progress
 
-- [x] Shared core protocol: qualification rules, decision schema, contract template, and 45 decision fixtures.
+- [x] Shared core protocol: qualification rules, decision schema, contract template, and 49 decision fixtures.
 - [x] Fixture validator and verification scripts.
 - [x] Codex and Claude Code wrappers.
 - [x] Install and enhanced doctor commands with per-check pass/fail output.
@@ -24,6 +24,8 @@ Last updated: 2026-06-28
 - [x] `0.2.2` documentation hotfix: npm package README and Quickstart point to the current published install version.
 - [x] `0.2.3` release: frozen dependency setup guardrails and refreshed public README positioning.
 - [x] `0.2.4` security fix: issue-intake only sends GitHub tokens to the official GitHub API and rejects non-loopback custom API base URLs.
+- [x] `0.3.0` release candidate: Claude Code `/loop`-aware recommendations and the `recommended_surface` decision field.
+- [x] Claude Code `/loop`-aware recommendations: decision JSON now includes `recommended_surface` for `manual`, `plan`, `goal`, `loop`, and `routine`.
 
 ## v1 Manual Artifact Progress
 

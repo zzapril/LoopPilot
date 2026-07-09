@@ -11,7 +11,11 @@ const requiredCoreRefs = [
 const guardrails = [
   "Unknown host capabilities force `PLAN_ONLY`.",
   "No objective gate forces `PLAN_ONLY` or `NO_GO`.",
+  "Local lint, test, typecheck, and file-output gates usually recommend `goal`.",
+  "Safe tasks waiting on external state such as CI, deploy status, PR review, issue updates, or queue status usually recommend `loop`.",
+  "Recurring work usually recommends `routine`, but remains `PLAN_ONLY` until cadence, source, permissions, report format, and stop conditions are explicit.",
   "Auth, payment, permission, deploy, publish, delete, secrets, or production work cannot enter `RUN_WITH_CONTRACT` by default.",
+  "Do not implement Claude Code `/loop`, a scheduler, background runner, queue, or automatic resume inside LoopPilot.",
   "Never commit, push, deploy, mutate dependencies, edit `package.json`, edit lockfiles, or edit secrets as part of v0 loop execution; only `pnpm install --frozen-lockfile`, `npm ci`, and `bun install --frozen-lockfile` are allowed for dependency setup.",
   "If scope expands, stop and ask.",
 ];

@@ -87,6 +87,13 @@ if (!runDecision || !nonRunDecision) {
       },
     },
     {
+      label: "negative.invalid_recommended_surface_enum",
+      base: runDecision,
+      mutate(decision) {
+        decision.recommended_surface = "autopilot";
+      },
+    },
+    {
       label: "negative.invalid_confidence_enum",
       base: runDecision,
       mutate(decision) {
@@ -168,6 +175,12 @@ if (!runDecision || !nonRunDecision) {
       label: "safety.contract_capabilities_must_match_decision",
       mutate(decision) {
         decision.contract.host_capabilities.supports_skills_or_commands = false;
+      },
+    },
+    {
+      label: "safety.run_with_contract_surface_must_be_executable",
+      mutate(decision) {
+        decision.recommended_surface = "manual";
       },
     },
   ];

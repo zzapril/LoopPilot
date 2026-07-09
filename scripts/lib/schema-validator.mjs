@@ -14,6 +14,7 @@ function arraysEqual(a, b) {
 
 const expectedEnums = {
   "properties.decision.enum": ["NO_GO", "PLAN_ONLY", "RUN_WITH_CONTRACT"],
+  "properties.recommended_surface.enum": ["manual", "plan", "goal", "loop", "routine"],
   "properties.confidence.enum": ["low", "medium", "high"],
   "$defs.hostCapabilities.properties.host.enum": ["codex", "claude_code", "unknown"],
   "$defs.hostCapabilities.properties.capability_confidence.enum": ["known", "unknown"],
@@ -146,6 +147,7 @@ export function validateDecisionSchemaDefinition(schema) {
   const required = getSchemaNode(schema, "required") ?? [];
   const expectedTopLevel = [
     "decision",
+    "recommended_surface",
     "confidence",
     "needs_clarification",
     "clarifying_question",

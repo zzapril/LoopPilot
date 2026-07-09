@@ -12,5 +12,5 @@ Suggested invocation:
 Use the looppilot skill to decide whether this task should loop:
 $ARGUMENTS
 
-Output schema-valid JSON first, then explain the decision. If safe, render the LoopPilot contract before taking action.
+Output schema-valid JSON first, including `recommended_surface`, then explain the decision. If safe, render the LoopPilot contract before taking action.
 ```

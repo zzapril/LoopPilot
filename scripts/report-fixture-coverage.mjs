@@ -110,6 +110,8 @@ const taxonomy = Object.fromEntries(taxonomyMatrix.map(({ category, pattern }) =
 const requiredTaxonomy = taxonomyMatrix.map(({ category }) => category);
 
 const counts = { NO_GO: 0, PLAN_ONLY: 0, RUN_WITH_CONTRACT: 0 };
+const recommendedSurfaces = ["manual", "plan", "goal", "loop", "routine"];
+const surfaceCoverage = Object.fromEntries(recommendedSurfaces.map((surface) => [surface, 0]));
 const riskCoverage = Object.fromEntries(riskKeywords.map((keyword) => [keyword, 0]));
 const taxonomyCoverage = Object.fromEntries(Object.keys(taxonomy).map((category) => [category, 0]));
 const errors = [];
@@ -137,6 +139,9 @@ for (const fixture of fixtures) {
   }
 
   const decision = fixture.expected_decision;
+  if (decision?.recommended_surface in surfaceCoverage) {
+    surfaceCoverage[decision.recommended_surface] += 1;
+  }
   const highRisk = taxonomy.payment_or_billing.test(text)
     || taxonomy.production_or_deploy.test(text)
     || taxonomy.secrets_or_credentials.test(text)
@@ -159,12 +164,16 @@ const undercoveredTaxonomy = taxonomyMatrix.filter(({ category, minExamples }) =
 const summary = {
   total: fixtures.length,
   decisions: counts,
+  recommended_surfaces: surfaceCoverage,
   covered_risk_keywords: Object.fromEntries(coveredRisks),
   covered_risk_keyword_count: coveredRisks.length,
   taxonomy: taxonomyCoverage,
 };
 
 if (coveredRisks.length < 10) errors.push("risk keyword coverage is too low; expected at least 10 covered keywords");
+for (const surface of recommendedSurfaces) {
+  if (surfaceCoverage[surface] === 0) errors.push(`recommended surface ${surface} is missing fixture coverage`);
+}
 if (undercoveredTaxonomy.length > 0) {
   errors.push(
     `missing required taxonomy coverage: ${undercoveredTaxonomy

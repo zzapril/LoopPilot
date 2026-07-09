@@ -38,6 +38,7 @@ function sortedStrings(value) {
 export function normalizeWrapperOutput(output) {
   return {
     decision: output?.decision ?? null,
+    recommended_surface: output?.recommended_surface ?? null,
     confidence: output?.confidence ?? null,
     needs_clarification: output?.needs_clarification ?? null,
     contract: output?.contract

@@ -1,6 +1,10 @@
 # LoopPilot Qualification Rules
 
-LoopPilot decides whether the current task should run as a bounded agent loop. It does not execute the loop itself.
+LoopPilot decides whether the current task should run as a bounded agent loop. It does not execute the loop itself, and it does not replace Claude Code `/loop`.
+
+Claude Code `/loop` answers: how do I run a prompt again later?
+
+LoopPilot answers: should this task enter a loop at all?
 
 ## Output Order
 
@@ -13,6 +17,18 @@ LoopPilot decides whether the current task should run as a bounded agent loop. I
 - `NO_GO`: do not loop; provide a safer alternative.
 - `PLAN_ONLY`: do not execute yet; provide a plan, risk summary, or task breakdown.
 - `RUN_WITH_CONTRACT`: execute only after showing a bounded contract and getting user confirmation unless already explicit.
+
+## Recommended Surfaces
+
+Every JSON decision must include `recommended_surface`:
+
+- `manual`: no agent execution should proceed; use human judgment, a safer manual workflow, or a read-only alternative.
+- `plan`: produce a plan, risk summary, task breakdown, or candidate gate before execution.
+- `goal`: use a bounded goal-style execution when the task has a local objective gate such as lint, tests, typecheck, or a reviewable file output.
+- `loop`: use Claude Code `/loop` when the task is safe but mainly waits for external state changes such as CI, deploy status, PR review, issue updates, or queue state.
+- `routine`: use a recurring routine only when cadence, source, permissions, report format, and stop conditions are explicit; otherwise return `PLAN_ONLY`.
+
+LoopPilot must not implement `/loop`, a scheduler, a background runner, a queue, or automatic resume. It only recommends the right execution surface.
 
 ## Two-Condition Test
 
@@ -46,6 +62,7 @@ If host capabilities are unknown, return `PLAN_ONLY`.
 | auth/payment/permission code changes | `PLAN_ONLY` or `NO_GO` |
 | dependency install | allow only lockfile-frozen installs (`pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`); dependency mutation remains `PLAN_ONLY` |
 | commit/push request | require explicit confirmation; v0 default no |
+| external wait such as CI, deploy, PR review, or queue status | prefer `recommended_surface: "loop"` when otherwise safe; do not implement waiting inside LoopPilot |
 | missing max rounds | ask once or default to 3 |
 | unknown host capabilities | `PLAN_ONLY` |
 

@@ -1,12 +1,14 @@
-# Launch notes: explain LoopPilot as a stopping-boundary tool
+# Launch notes: explain LoopPilot as an agent-mode pre-flight check
 
 Use this when posting about LoopPilot outside the repository. The goal is to explain the problem, not to lead with “I built a CLI.”
 
 ## Short positioning
 
-AI agents are not incapable of working in loops. The hard question is when they should stop.
+AI agents are not incapable of working in loops. The hard question is when they should start, which surface they should use, and when they should stop.
 
-LoopPilot is a small pre-flight check for Claude Code and Codex: before your agent starts changing files, it decides whether the task is `NO_GO`, `PLAN_ONLY`, or `RUN_WITH_CONTRACT`.
+LoopPilot is a small pre-flight check for Claude Code and Codex: before your agent starts changing files, it decides whether the task is `NO_GO`, `PLAN_ONLY`, or `RUN_WITH_CONTRACT`, then recommends `manual`, `plan`, `goal`, `loop`, or `routine`.
+
+Claude Code `/loop` answers how to run a prompt again later. LoopPilot answers whether the task should enter a loop at all.
 
 ## Possible titles
 
@@ -29,6 +31,12 @@ LoopPilot returns one of three answers:
 - `PLAN_ONLY`: make a plan first; do not execute yet.
 - `RUN_WITH_CONTRACT`: the task is narrow enough, has a gate, and has stop conditions.
 
+It also recommends a surface:
+
+- `goal` for local lint/test/typecheck loops.
+- `loop` for safe tasks that wait on external state, such as CI or PR review.
+- `routine` for recurring work after cadence, source, permissions, report format, and stop conditions are clear.
+
 Example:
 
 ```text
@@ -39,12 +47,13 @@ Output shape:
 
 ```text
 RUN_WITH_CONTRACT
+Surface: goal
 Allowed: read files, edit lint-related code, run pnpm lint
 Forbidden: commit, push, deploy, change secrets
 Stop: lint passes, same failure twice, scope expands
 ```
 
-This is intentionally an early `0.2.x` project. It is not a background issue-fixing robot, not a deployer, and not a GitHub queue runner. It is a stopping-boundary tool for agentic coding.
+This is intentionally an early project. It is not a background issue-fixing robot, not a deployer, and not a GitHub queue runner. It is an agent-mode triage tool for agentic coding.
 
 ## What to avoid saying
 

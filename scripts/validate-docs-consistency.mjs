@@ -15,6 +15,7 @@ const requiredDocs = [
   "docs/release-notes-0.2.2.md",
   "docs/release-notes-0.2.3.md",
   "docs/release-notes-0.2.4.md",
+  "docs/release-notes-0.3.0.md",
 ];
 
 const discoveredDocs = fs.existsSync("docs")
@@ -48,10 +49,13 @@ const forbiddenFragments = [
 const requiredFragmentsByFile = {
   "README.md": [
     "@looppilot/cli",
+    "0.3.0",
     "0.2.4",
     "npx @looppilot/cli@0.2.4 install",
     "/should-loop <task-or-issue-url>",
     "Use LoopPilot on <task-or-issue-url>",
+    "Where LoopPilot fits with Claude Code `/loop`",
+    "recommended_surface",
     "Advanced / Debug",
     "GitHub Copilot coding agent",
     "OpenHands",
@@ -72,6 +76,8 @@ const requiredFragmentsByFile = {
     "0.2.2",
     "0.2.3",
     "0.2.4",
+    "0.3.0",
+    "recommended_surface",
     "issue-intake",
     ".looppilot/scripts/issue-intake.mjs",
     ".looppilot/latest-review-gate.md",
@@ -107,9 +113,12 @@ const requiredFragmentsByFile = {
   ],
   "docs/LoopPilot_Quickstart.md": [
     "0.2.4",
+    "0.3.0",
     "npx @looppilot/cli@0.2.4 install",
     "/should-loop <task-or-issue-url>",
     "Use LoopPilot on <task-or-issue-url>",
+    "Claude Code `/loop`",
+    "recommended_surface",
     "Advanced / Debug",
     "issue-intake",
     "possibly_incomplete",
@@ -131,6 +140,7 @@ const requiredFragmentsByFile = {
     "0.2.2",
     "0.2.3",
     "0.2.4",
+    "0.3.0",
     ".looppilot/scripts/issue-intake.mjs",
     "https://www.npmjs.com/package/@looppilot/cli",
     "611c591fa361bf9a1bb4209fd028b8e842eb017a",
@@ -189,6 +199,17 @@ const requiredFragmentsByFile = {
     "custom API base URLs do not receive",
     "/should-loop <task-or-issue-url>",
     "Use LoopPilot on <task-or-issue-url>",
+  ],
+  "docs/release-notes-0.3.0.md": [
+    "@looppilot/cli@0.3.0",
+    "release-ready candidate",
+    "recommended_surface",
+    "Claude Code `/loop`",
+    "manual",
+    "plan",
+    "goal",
+    "loop",
+    "routine",
   ],
 };
 

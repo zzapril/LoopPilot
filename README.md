@@ -1,8 +1,8 @@
 # LoopPilot
 
-**LoopPilot helps Claude Code / Codex decide whether a task should loop.**
+**LoopPilot helps Claude Code / Codex decide which agent execution mode a task should use.**
 
-AI agents are not incapable of working in loops. The hard question is when they should stop. LoopPilot answers before your agent starts changing files: `NO_GO`, `PLAN_ONLY`, or `RUN_WITH_CONTRACT`.
+AI agents are not incapable of working in loops. The hard question is when they should start, how they should run, and when they should stop. LoopPilot answers before your agent starts changing files: `NO_GO`, `PLAN_ONLY`, or `RUN_WITH_CONTRACT`, plus a `recommended_surface` such as `goal`, `loop`, `routine`, `plan`, or `manual`.
 
 ![LoopPilot demo output](docs/assets/demo-output.svg)
 
@@ -30,9 +30,20 @@ A broad agent goal can sound productive while hiding important safety questions:
 
 LoopPilot is the pre-flight check. It does not replace Claude Code or Codex; it gives the current agent a shared protocol for deciding whether loop-style execution is safe.
 
+## Where LoopPilot fits with Claude Code `/loop`
+
+Claude Code `/loop` answers:
+How do I run a prompt again later?
+
+LoopPilot answers:
+Should this task enter a loop at all?
+
+LoopPilot does not replace Claude Code `/loop`. It helps decide when `/loop` is the right tool, when a bounded goal is enough, when a recurring routine needs planning, and when the agent should stay out of execution.
+
 ## What LoopPilot does
 
 - Classifies candidate loop tasks as `NO_GO`, `PLAN_ONLY`, or `RUN_WITH_CONTRACT`.
+- Recommends the execution surface: `manual`, `plan`, `goal`, `loop`, or `routine`.
 - Generates an execution boundary before changes begin: goal, scope, allowed actions, forbidden actions, gate, stop conditions, max rounds, and report fields.
 - Keeps work agent-native: Claude Code or Codex decides and acts in the current session.
 - Reads GitHub issue URLs through a narrow, read-only helper when issue context is needed.
@@ -53,7 +64,7 @@ Dependency setup is limited to existing-lockfile commands: `pnpm install --froze
 
 ## Install
 
-Current repository version: `@looppilot/cli@0.2.4`.
+Current repository version: `@looppilot/cli@0.3.0`.
 
 Latest published npm version: `@looppilot/cli@0.2.4`.
 
@@ -105,7 +116,17 @@ Use these as starting points inside your current agent session:
 | `PLAN_ONLY` | The task might be possible later, but needs clearer scope, a gate, or human confirmation first. | Produce a plan, risk summary, or task breakdown without executing the loop. |
 | `RUN_WITH_CONTRACT` | The task is narrow, has an objective gate, and has bounded stop conditions. | Show the contract, get confirmation when needed, then work inside that contract only. |
 
-## 3 real examples
+`recommended_surface` refines the decision:
+
+| Surface | Use when |
+|---|---|
+| `manual` | The task should not be delegated to an agent execution loop. |
+| `plan` | The task needs a plan, risk summary, or candidate gate before action. |
+| `goal` | The task has a local objective gate such as lint, tests, typecheck, or a reviewable file output. |
+| `loop` | The task is safe but mainly waits for external state, such as CI, deploy status, PR review, issue updates, or queue status. |
+| `routine` | The user is asking for recurring work with cadence, source, permissions, report format, and stop conditions. |
+
+## Execution-mode examples
 
 ### 1. Fix lint until the lint gate passes
 
@@ -113,7 +134,7 @@ Use these as starting points inside your current agent session:
 /should-loop Fix lint until pnpm lint passes. Do not commit or push.
 ```
 
-Likely decision: `RUN_WITH_CONTRACT` when the scope is lint-related, the gate is `pnpm lint`, and stop conditions are explicit.
+Likely decision: `RUN_WITH_CONTRACT` with `recommended_surface: "goal"` when the scope is lint-related, the gate is `pnpm lint`, and stop conditions are explicit.
 
 ### 2. Fix one failing test
 
@@ -121,7 +142,7 @@ Likely decision: `RUN_WITH_CONTRACT` when the scope is lint-related, the gate is
 /should-loop Fix the failing parser test with npm test -- tests/parser.test.ts, max 3 rounds.
 ```
 
-Likely decision: `RUN_WITH_CONTRACT` when the failing test and related files are clear.
+Likely decision: `RUN_WITH_CONTRACT` with `recommended_surface: "goal"` when the failing test and related files are clear.
 
 ### 3. Analyze a GitHub issue before coding
 
@@ -129,7 +150,31 @@ Likely decision: `RUN_WITH_CONTRACT` when the failing test and related files are
 /should-loop https://github.com/owner/repo/issues/123
 ```
 
-Likely decision: `PLAN_ONLY` when comments, linked pull requests, screenshots, logs, or external context may matter. The issue body is treated as untrusted context.
+Likely decision: `PLAN_ONLY` with `recommended_surface: "plan"` when comments, linked pull requests, screenshots, logs, or external context may matter. The issue body is treated as untrusted context.
+
+### 4. Wait for CI and summarize failures
+
+```text
+/should-loop wait for CI and summarize failures
+```
+
+Likely decision: `RUN_WITH_CONTRACT` with `recommended_surface: "loop"` when the task is bounded to waiting for terminal CI status and summarizing failures.
+
+### 5. Daily feedback summary
+
+```text
+/should-loop every morning summarize user feedback
+```
+
+Likely decision: `PLAN_ONLY` with `recommended_surface: "routine"` until cadence, source, permissions, report format, and stop conditions are explicit.
+
+### 6. Keep improving until quality is best
+
+```text
+/should-loop keep improving this repo until quality is best
+```
+
+Likely decision: `PLAN_ONLY` with `recommended_surface: "plan"` because the goal is broad, subjective, and needs measurable gates first.
 
 Large refactors, production deploys, publishing, secrets, auth/payment changes, or “finish the project” requests usually become `PLAN_ONLY` or `NO_GO`, not `RUN_WITH_CONTRACT`.
 
@@ -197,7 +242,7 @@ These files are not runner state, approval gates, deployment gates, release gate
 Implemented:
 
 - Shared LoopPilot core rules, decision schema, contract template, report/export templates, and v1 manual artifact templates including review gates.
-- 45 decision fixtures: 15 `NO_GO`, 15 `PLAN_ONLY`, and 15 `RUN_WITH_CONTRACT`.
+- 49 decision fixtures covering `NO_GO`, `PLAN_ONLY`, and `RUN_WITH_CONTRACT`, including Claude Code `/loop`-aware `recommended_surface` examples.
 - Codex and Claude Code wrappers that reference the same shared core.
 - Claude Code `should-loop` command alias that points to the Claude skill without duplicating rules.
 - Agent-native GitHub issue URL intake for Codex and Claude Code, backed by a read-only issue-intake helper.

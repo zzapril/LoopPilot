@@ -194,6 +194,7 @@ Output fields:
 ```json
 {
   "decision": "NO_GO",
+  "recommended_surface": "manual",
   "confidence": "high",
   "needs_clarification": false,
   "clarifying_question": null,
@@ -226,6 +227,7 @@ Output fields:
 ```json
 {
   "decision": "PLAN_ONLY",
+  "recommended_surface": "plan",
   "confidence": "medium",
   "needs_clarification": false,
   "clarifying_question": null,
@@ -259,6 +261,7 @@ Output fields:
 ```json
 {
   "decision": "RUN_WITH_CONTRACT",
+  "recommended_surface": "goal",
   "confidence": "high",
   "needs_clarification": false,
   "clarifying_question": null,
@@ -419,6 +422,7 @@ Shape:
 ```json
 {
   "decision": "RUN_WITH_CONTRACT",
+  "recommended_surface": "goal",
   "host_capabilities": {
     "host": "codex",
     "can_edit_files": true,

@@ -1,6 +1,9 @@
 import fs from "node:fs";
 
 const DECISIONS = new Set(["NO_GO", "PLAN_ONLY", "RUN_WITH_CONTRACT"]);
+const RECOMMENDED_SURFACES = new Set(["manual", "plan", "goal", "loop", "routine"]);
+const RUN_WITH_CONTRACT_SURFACES = new Set(["goal", "loop", "routine"]);
+const PLAN_ONLY_SURFACES = new Set(["plan", "routine"]);
 const CONFIDENCE = new Set(["low", "medium", "high"]);
 const HOSTS = new Set(["codex", "claude_code", "unknown"]);
 const CAPABILITY_CONFIDENCE = new Set(["known", "unknown"]);
@@ -60,6 +63,7 @@ const REPORT_FIELDS = new Set([
 
 const REQUIRED_TOP_LEVEL = [
   "decision",
+  "recommended_surface",
   "confidence",
   "needs_clarification",
   "clarifying_question",
@@ -280,6 +284,9 @@ export function validateDecision(decision, path = "decision") {
   }
 
   if (!DECISIONS.has(decision.decision)) fail(errors, `${path}.decision`, "unsupported decision");
+  if (!RECOMMENDED_SURFACES.has(decision.recommended_surface)) {
+    fail(errors, `${path}.recommended_surface`, "unsupported recommended surface");
+  }
   if (!CONFIDENCE.has(decision.confidence)) fail(errors, `${path}.confidence`, "unsupported confidence");
   if (typeof decision.needs_clarification !== "boolean") {
     fail(errors, `${path}.needs_clarification`, "must be boolean");
@@ -304,6 +311,9 @@ export function validateDecision(decision, path = "decision") {
   }
 
   if (decision.decision === "RUN_WITH_CONTRACT") {
+    if (!RUN_WITH_CONTRACT_SURFACES.has(decision.recommended_surface)) {
+      fail(errors, `${path}.recommended_surface`, "must be goal, loop, or routine for RUN_WITH_CONTRACT");
+    }
     if (decision.needs_clarification) {
       fail(errors, `${path}.needs_clarification`, "must be false for RUN_WITH_CONTRACT");
     }
@@ -322,6 +332,14 @@ export function validateDecision(decision, path = "decision") {
     errors.push(...validateContract(decision.contract, decision.host_capabilities, `${path}.contract`));
   } else if (decision.contract !== null) {
     fail(errors, `${path}.contract`, "must be null unless decision is RUN_WITH_CONTRACT");
+  }
+
+  if (decision.decision === "NO_GO" && decision.recommended_surface !== "manual") {
+    fail(errors, `${path}.recommended_surface`, "must be manual for NO_GO");
+  }
+
+  if (decision.decision === "PLAN_ONLY" && !PLAN_ONLY_SURFACES.has(decision.recommended_surface)) {
+    fail(errors, `${path}.recommended_surface`, "must be plan or routine for PLAN_ONLY");
   }
 
   if (decision.host_capabilities?.capability_confidence === "unknown" && decision.decision === "RUN_WITH_CONTRACT") {

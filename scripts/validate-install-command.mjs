@@ -56,9 +56,12 @@ function assertDoctorMetadata(report, label) {
   if (typeof metadata.timestamp !== "string" || Number.isNaN(Date.parse(metadata.timestamp))) {
     errors.push(`${label} metadata timestamp was not an ISO date`);
   }
-  if (metadata.fixture?.total !== 45) errors.push(`${label} metadata fixture total mismatch`);
-  for (const decision of ["NO_GO", "PLAN_ONLY", "RUN_WITH_CONTRACT"]) {
-    if (metadata.fixture?.counts?.[decision] !== 15) errors.push(`${label} metadata fixture count mismatch for ${decision}`);
+  const expectedFixtureCounts = { NO_GO: 15, PLAN_ONLY: 17, RUN_WITH_CONTRACT: 17 };
+  if (metadata.fixture?.total !== 49) errors.push(`${label} metadata fixture total mismatch`);
+  for (const [decision, expectedCount] of Object.entries(expectedFixtureCounts)) {
+    if (metadata.fixture?.counts?.[decision] !== expectedCount) {
+      errors.push(`${label} metadata fixture count mismatch for ${decision}`);
+    }
   }
   if (!Array.isArray(metadata.wrapper_files) || metadata.wrapper_files.length !== 3) {
     errors.push(`${label} metadata wrapper_files mismatch`);
