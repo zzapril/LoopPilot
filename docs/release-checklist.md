@@ -2,13 +2,13 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.2.4` is the latest published release line. `0.2.4` was published to npm on `2026-06-30T15:15:57.875Z`.
+Current status: `0.3.0` is the latest published release line. `0.3.0` was published to npm on `2026-07-09T15:52:06.162Z`.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
-- Shasum: `9251f12b7e4179fb546ea0336cc9c99cde044398`
+- Shasum: `6574c30221bec3141779f40508d1981b05388868`
 
-Current repository status: `0.3.0` is a release-ready candidate for Claude Code `/loop`-aware recommendations and the `recommended_surface` decision field.
+Current repository status: `0.3.0` is published with Claude Code `/loop`-aware recommendations and the `recommended_surface` decision field.
 
 ## Package Readiness
 
@@ -174,12 +174,14 @@ After verification:
 - [x] Record the published timestamp and shasum after npm publish succeeds.
 - [x] Confirm `npx @looppilot/cli@0.2.4 --help`, `install`, and `doctor --json` work from a clean temporary directory.
 
-## 0.3.0 Release Candidate
+## 0.3.0 Publish Record
 
+- Published: `2026-07-09T15:52:06.162Z`
+- Shasum: `6574c30221bec3141779f40508d1981b05388868`
 - Focus: add Claude Code `/loop`-aware recommendations without adding a runner, scheduler, GitHub queue, background workflow, or automatic resume.
 - [x] Rerun the full validation section after the `recommended_surface` schema, wrapper, docs, and fixture updates.
 - [x] Confirm fixtures include `recommended_surface` coverage for `manual`, `plan`, `goal`, `loop`, and `routine`.
 - [x] Confirm README and Quickstart explain that LoopPilot does not replace Claude Code `/loop`; it helps decide when `/loop` is the right surface.
-- [ ] Publish `@looppilot/cli@0.3.0` to npm only after release validation passes and publish credentials are available.
-- [ ] Record the published timestamp and shasum after npm publish succeeds.
-- [ ] Confirm `npx @looppilot/cli@0.3.0 --help`, `install`, and `doctor --json` work from a clean temporary directory.
+- [x] Publish `@looppilot/cli@0.3.0` to npm only after release validation passes and publish credentials are available.
+- [x] Record the published timestamp and shasum after npm publish succeeds.
+- [x] Confirm `npx @looppilot/cli@0.3.0 --help`, `install`, and `doctor --json` work from a clean temporary directory.

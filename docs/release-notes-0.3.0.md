@@ -1,9 +1,11 @@
 # LoopPilot 0.3.0 Release Notes
 
-Status: release-ready candidate.
+Status: published to npm.
 
 - Package: `@looppilot/cli@0.3.0`
-- Latest published npm version before this candidate: `@looppilot/cli@0.2.4`
+- Latest published npm version after this release: `@looppilot/cli@0.3.0`
+- Published: `2026-07-09T15:52:06.162Z`
+- Shasum: `6574c30221bec3141779f40508d1981b05388868`
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 
 ## Highlights

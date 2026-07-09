@@ -50,8 +50,7 @@ const requiredFragmentsByFile = {
   "README.md": [
     "@looppilot/cli",
     "0.3.0",
-    "0.2.4",
-    "npx @looppilot/cli@0.2.4 install",
+    "npx @looppilot/cli@0.3.0 install",
     "/should-loop <task-or-issue-url>",
     "Use LoopPilot on <task-or-issue-url>",
     "Where LoopPilot fits with Claude Code `/loop`",
@@ -112,9 +111,8 @@ const requiredFragmentsByFile = {
     "A `check` command is also not part of the current release-ready surface",
   ],
   "docs/LoopPilot_Quickstart.md": [
-    "0.2.4",
     "0.3.0",
-    "npx @looppilot/cli@0.2.4 install",
+    "npx @looppilot/cli@0.3.0 install",
     "/should-loop <task-or-issue-url>",
     "Use LoopPilot on <task-or-issue-url>",
     "Claude Code `/loop`",
@@ -202,7 +200,8 @@ const requiredFragmentsByFile = {
   ],
   "docs/release-notes-0.3.0.md": [
     "@looppilot/cli@0.3.0",
-    "release-ready candidate",
+    "published to npm",
+    "6574c30221bec3141779f40508d1981b05388868",
     "recommended_surface",
     "Claude Code `/loop`",
     "manual",

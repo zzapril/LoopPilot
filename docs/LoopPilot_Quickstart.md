@@ -4,7 +4,7 @@ LoopPilot should feel like a safety button inside Claude Code or Codex: install 
 
 Current repository version: `@looppilot/cli@0.3.0`.
 
-Latest published npm version: `@looppilot/cli@0.2.4`.
+Latest published npm version: `@looppilot/cli@0.3.0`.
 
 ## 1. Install Once
 
@@ -21,8 +21,8 @@ The default install target is both Codex and Claude Code for the current project
 For a one-off trial:
 
 ```bash
-npx @looppilot/cli@0.2.4 install
-npx @looppilot/cli@0.2.4 doctor
+npx @looppilot/cli@0.3.0 install
+npx @looppilot/cli@0.3.0 doctor
 ```
 
 If `npx` keeps spinning, use the global install path above.
