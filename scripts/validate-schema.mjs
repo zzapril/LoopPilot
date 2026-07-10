@@ -19,6 +19,15 @@ if (validateJsonSchema(negativeProbe, schema, "negativeProbe").length === 0) {
   errors.push("negativeProbe: missing required decision unexpectedly passed JSON Schema validation");
 }
 
+const driftedSchema = structuredClone(schema);
+driftedSchema.title = "Unexpected local schema";
+if (validateDecisionSchemaDefinition(driftedSchema).length === 0) {
+  errors.push("driftedSchema: schema drift unexpectedly matched the generated runtime validator");
+}
+if (validateJsonSchema(fixtures[0].expected_decision, driftedSchema, "driftedSchemaProbe").length === 0) {
+  errors.push("driftedSchemaProbe: generated validator accepted a different schema definition");
+}
+
 if (errors.length > 0) {
   console.error("LoopPilot schema validation failed:");
   for (const error of errors) {

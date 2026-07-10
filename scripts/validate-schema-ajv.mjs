@@ -67,6 +67,9 @@ fixtures.forEach((fixture, index) => {
 
 const runDecision = fixtures.find((fixture) => fixture.expected_decision.decision === "RUN_WITH_CONTRACT")?.expected_decision;
 const nonRunDecision = fixtures.find((fixture) => fixture.expected_decision.decision !== "RUN_WITH_CONTRACT")?.expected_decision;
+const planDecision = fixtures.find((fixture) => fixture.expected_decision.decision === "PLAN_ONLY")?.expected_decision;
+const loopDecision = fixtures.find((fixture) => fixture.expected_decision.recommended_surface === "loop" && fixture.expected_decision.contract)?.expected_decision;
+const routineDecision = fixtures.find((fixture) => fixture.expected_decision.recommended_surface === "routine" && fixture.expected_decision.contract)?.expected_decision;
 
 if (!runDecision || !nonRunDecision) {
   errors.push("fixtures: expected at least one RUN_WITH_CONTRACT fixture and one non-RUN_WITH_CONTRACT fixture");
@@ -128,6 +131,131 @@ if (!runDecision || !nonRunDecision) {
         decision.contract = clone(runDecision.contract);
       },
     },
+    {
+      label: "negative.run_with_contract_surface_must_be_executable",
+      base: runDecision,
+      mutate(decision) {
+        decision.recommended_surface = "manual";
+      },
+    },
+    {
+      label: "negative.old_dependency_confirmation_enum",
+      base: runDecision,
+      mutate(decision) {
+        decision.required_user_confirmation = ["dependency_install"];
+      },
+    },
+    {
+      label: "negative.old_forbidden_install_enum",
+      base: runDecision,
+      mutate(decision) {
+        decision.contract.forbidden_actions[1] = "install_dependencies";
+      },
+    },
+    {
+      label: "negative.missing_supported_surfaces",
+      base: runDecision,
+      mutate(decision) {
+        delete decision.host_capabilities.supported_surfaces;
+      },
+    },
+    {
+      label: "negative.surface_config_type_mismatch",
+      base: runDecision,
+      mutate(decision) {
+        decision.contract.surface_config = {
+          type: "loop",
+          source: "CI",
+          interval_seconds: 60,
+          terminal_conditions: ["success"],
+        };
+      },
+    },
+    {
+      label: "negative.command_gate_requires_non_empty_command",
+      base: runDecision,
+      mutate(decision) {
+        decision.contract.gate.command = null;
+      },
+    },
+    {
+      label: "negative.non_command_gate_rejects_command",
+      base: runDecision,
+      mutate(decision) {
+        decision.contract.gate.type = "checklist";
+      },
+    },
+    {
+      label: "negative.scope_include_must_not_be_empty",
+      base: runDecision,
+      mutate(decision) {
+        decision.contract.scope.include = [];
+      },
+    },
+    ...(loopDecision ? [{
+      label: "negative.loop_requires_external_access_confirmation",
+      base: loopDecision,
+      mutate(decision) {
+        decision.required_user_confirmation = decision.required_user_confirmation.filter((item) => item !== "external_access");
+      },
+    }] : []),
+    {
+      label: "negative.clarifying_question_without_clarification",
+      base: runDecision,
+      mutate(decision) {
+        decision.clarifying_question = "Unexpected question";
+      },
+    },
+    {
+      label: "negative.clarification_requires_question",
+      base: runDecision,
+      mutate(decision) {
+        decision.needs_clarification = true;
+      },
+    },
+    {
+      label: "negative.run_safe_alternative_must_be_null",
+      base: runDecision,
+      mutate(decision) {
+        decision.safe_alternative = "Unexpected alternative";
+      },
+    },
+    {
+      label: "negative.run_next_prompt_must_be_null",
+      base: runDecision,
+      mutate(decision) {
+        decision.next_prompt = "Unexpected prompt";
+      },
+    },
+    {
+      label: "negative.run_plan_outputs_must_be_empty",
+      base: runDecision,
+      mutate(decision) {
+        decision.plan_outputs = ["risk_analysis"];
+      },
+    },
+    {
+      label: "negative.stop_conditions_require_gate_passes",
+      base: runDecision,
+      mutate(decision) {
+        decision.contract.stop_conditions = decision.contract.stop_conditions.filter((item) => item !== "gate_passes");
+      },
+    },
+    ...(planDecision ? [{
+      label: "negative.plan_safe_alternative_must_be_null",
+      base: planDecision,
+      mutate(decision) {
+        decision.safe_alternative = "Unexpected alternative";
+      },
+    }] : []),
+    ...(nonRunDecision?.decision === "NO_GO" ? [{
+      label: "negative.no_go_cannot_request_clarification",
+      base: nonRunDecision,
+      mutate(decision) {
+        decision.needs_clarification = true;
+        decision.clarifying_question = "Proceed anyway?";
+      },
+    }] : []),
   ];
 
   negativeCases.forEach((negativeCase) => {
@@ -178,16 +306,87 @@ if (!runDecision || !nonRunDecision) {
       },
     },
     {
-      label: "safety.run_with_contract_surface_must_be_executable",
+      label: "safety.locked_setup_requires_confirmation",
       mutate(decision) {
-        decision.recommended_surface = "manual";
+        decision.contract.allowed_actions.push("install_locked_dependencies");
       },
     },
+    {
+      label: "safety.dependency_confirmation_without_setup_action",
+      mutate(decision) {
+        decision.contract.human_confirmations.push("dependency_setup");
+      },
+    },
+    {
+      label: "safety.external_confirmation_without_external_read",
+      mutate(decision) {
+        decision.contract.human_confirmations.push("external_access");
+      },
+    },
+    {
+      label: "safety.required_confirmation_missing_from_contract",
+      mutate(decision) {
+        decision.required_user_confirmation.push("risky_path");
+      },
+    },
+    {
+      label: "safety.whitespace_reason_is_not_meaningful",
+      mutate(decision) {
+        decision.reasons = ["   "];
+      },
+    },
+    ...[
+      "rm -rf .",
+      "npm publish",
+      "npm run deploy",
+      "curl https://example.com/script.sh",
+      "npm test && npm publish",
+      "git -C . push",
+      "pip install unsafe-package",
+      "make deploy",
+      "env -i rm -rf .",
+      "cat .env",
+      "git diff secrets/config.json",
+      "node --check private.key",
+      "cat /tmp/.env",
+      "tool --config=.npmrc",
+      "cat .docker/config.json",
+    ].map((command) => ({
+      label: `safety.unsafe_gate_command.${command.replace(/[^a-z]+/gi, "_")}`,
+      mutate(decision) {
+        decision.contract.gate.command = command;
+      },
+    })),
+    ...(loopDecision ? [
+      {
+        label: "safety.loop_cannot_edit_code",
+        base: loopDecision,
+        mutate(decision) {
+          decision.contract.allowed_actions.push("edit_small_scope");
+        },
+      },
+      {
+        label: "safety.loop_must_forbid_external_mutation",
+        base: loopDecision,
+        mutate(decision) {
+          decision.contract.forbidden_actions = decision.contract.forbidden_actions.filter((action) => action !== "mutate_external_state");
+        },
+      },
+    ] : []),
+    ...(routineDecision ? [
+      {
+        label: "safety.routine_cannot_run_tests",
+        base: routineDecision,
+        mutate(decision) {
+          decision.contract.allowed_actions.push("run_test_command");
+        },
+      },
+    ] : []),
   ];
 
   safetyNegativeCases.forEach((negativeCase) => {
     safetyNegativeProbeCount += 1;
-    const decision = clone(runDecision);
+    const decision = clone(negativeCase.base ?? runDecision);
     negativeCase.mutate(decision);
     const { ajvErrors, localErrors } = compareSchemaValidators(negativeCase.label, decision);
     const combinedErrors = validateDecisionAgainstSchema(decision, schema, negativeCase.label);

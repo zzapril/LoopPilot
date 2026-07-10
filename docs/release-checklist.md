@@ -8,13 +8,13 @@ Current status: `0.3.0` is the latest published release line. `0.3.0` was publis
 - Dist tag: `latest`
 - Shasum: `6574c30221bec3141779f40508d1981b05388868`
 
-Current repository status: `0.3.0` is published with Claude Code `/loop`-aware recommendations and the `recommended_surface` decision field.
+Current repository status: `0.4.0` is a release candidate built on the published `0.3.0` line. It adds executable surface contracts, explicit dependency-setup approval, atomic installation, reliable scan state, and generated standalone schema validation. It has not been published.
 
 ## Package Readiness
 
 - [x] Confirm the package should be published publicly as `@looppilot/cli`.
 - [x] Confirm `package.json` has `"private": false`, `"license": "MIT"`, repository metadata, and public scoped-package publish config.
-- [x] Confirm `package.json` version is `0.3.0`.
+- [x] Confirm `package.json` version is `0.4.0`.
 - [x] Confirm the `files` whitelist contains only source, wrapper, core, fixture, script, docs, README, and license files needed by users.
 - [x] Confirm no secrets, credentials, local-only files, generated handoff exports, latest files, or generated v1 artifacts are intended for the package.
 - [x] Confirm the README install instructions match the package name and CLI behavior.
@@ -185,3 +185,34 @@ After verification:
 - [x] Publish `@looppilot/cli@0.3.0` to npm only after release validation passes and publish credentials are available.
 - [x] Record the published timestamp and shasum after npm publish succeeds.
 - [x] Confirm `npx @looppilot/cli@0.3.0 --help`, `install`, and `doctor --json` work from a clean temporary directory.
+
+## 0.4.0 Release Candidate
+
+- Status: prepared locally; npm publish, registry verification, push, and release-record finalization remain pending.
+- Focus: make surface recommendations enforceable and close the installer, scan, intake, dependency, schema-runtime, and Node support gaps found in the post-`0.3.0` review.
+- [x] Require `host_capabilities.supported_surfaces` and a matching `surface_config` for executable contracts.
+- [x] Keep external `loop` and `routine` sources read-only and capability-gated.
+- [x] Replace `install_dependencies` with `mutate_dependencies`, and replace `dependency_install` with `dependency_setup`.
+- [x] Require explicit `dependency_setup` confirmation for frozen/locked dependency setup.
+- [x] Preflight every install destination before writing and roll back atomically on failure.
+- [x] Distinguish unavailable and failed scan commands, parse NUL-delimited git status, and discover nested risk paths with a traversal bound.
+- [x] Reject malformed, zero, leading-zero, unsafe-integer, and extra-segment GitHub issue URLs.
+- [x] Generate and drift-check a standalone runtime schema validator.
+- [x] Reject Agent Pack install paths containing symlink components and verify stale installed files with `doctor`.
+- [x] Require non-empty command gates, exact external-access confirmations, and action-aligned dependency confirmations.
+- [x] Validate complete wrapper golden outputs, including confirmation and report fields.
+- [x] Enforce the scan traversal limit without inspecting an extra entry.
+- [x] Enforce decision-state/clarification invariants and mandatory `gate_passes` stop conditions.
+- [x] Detect risk-keyword filenames and common sensitive client configuration without reading contents.
+- [x] Reject duplicate CLI options and non-canonical GitHub issue URLs.
+- [x] Escape untrusted issue metadata in Markdown and reject parity dataset extras/mode typos.
+- [x] Reject unsafe command gates and contradictory NO_GO clarification state.
+- [x] Protect every explicit output command from project symlink escapes and Agent Pack overwrites.
+- [x] Use atomic replacement for export/save/doctor/issue outputs and validate issue destinations before network access.
+- [x] Cover `..name` containment, case-insensitive protected paths, and failed-replacement original preservation.
+- [x] Protect dependency manifests/lockfiles and sensitive output/source paths across explicit file commands.
+- [x] Reject sensitive file references in command gates, including absolute and option-assignment forms.
+- [x] Set Node support to `>=22` and CI coverage to Node 22, 24, and 26.
+- [x] Run the complete local release validation section on the final candidate.
+- [ ] Publish `@looppilot/cli@0.4.0` only after explicit release approval and credentials are available.
+- [ ] Record npm timestamp and shasum, then run published `npx` install/doctor smoke tests.

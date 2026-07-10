@@ -41,6 +41,8 @@ for (const [args, expected] of [
   [["issue-intake", "--number"], "Missing value for --number."],
   [["save-report", "--from"], "Missing value for --from."],
   [["doctor", "--unknown"], "Unknown argument: --unknown"],
+  [["install", "--target", "codex", "--target", "claude"], "Duplicate option: --target."],
+  [["install", "--dry-run", "--dry-run"], "Duplicate option: --dry-run."],
   [["install", "--json", "--dry-run"], "install does not support --json."],
   [["issue-intake", "--target", "codex", "--url", "https://github.com/acme/widgets/issues/1"], "issue-intake does not support --target."],
   [["issue-intake", "--dry-run", "--url", "https://github.com/acme/widgets/issues/1"], "issue-intake --dry-run requires --output."],

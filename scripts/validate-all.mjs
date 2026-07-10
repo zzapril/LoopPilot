@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 
 const commands = [
   ["node", ["scripts/validate-schema.mjs"]],
+  ["node", ["scripts/generate-schema-validator.mjs", "--check"]],
   ["node", ["scripts/validate-schema-ajv.mjs"]],
   ["node", ["scripts/validate-fixtures.mjs"]],
   ["node", ["scripts/validate-wrappers.mjs"]],

@@ -17,6 +17,7 @@ Render this contract before a `RUN_WITH_CONTRACT` task starts. The current agent
     "can_run_commands": true,
     "has_approval_flow": true,
     "supports_skills_or_commands": true,
+    "supported_surfaces": ["goal"],
     "capability_confidence": "known"
   },
   "reasons": ["Objective gate and bounded scope are available."],
@@ -31,7 +32,10 @@ Render this contract before a `RUN_WITH_CONTRACT` task starts. The current agent
       "exclude": [".env", ".env.*", "secrets/**", "dist/**"]
     },
     "allowed_actions": ["read_files", "edit_small_scope", "run_test_command"],
-    "forbidden_actions": ["edit_secrets", "install_dependencies", "git_commit", "git_push", "deploy"],
+    "forbidden_actions": ["edit_secrets", "mutate_dependencies", "git_commit", "git_push", "deploy"],
+    "surface_config": {
+      "type": "goal"
+    },
     "gate": {
       "type": "command",
       "command": "<safe verification command>",
@@ -45,9 +49,10 @@ Render this contract before a `RUN_WITH_CONTRACT` task starts. The current agent
       "can_run_commands": true,
       "has_approval_flow": true,
       "supports_skills_or_commands": true,
+      "supported_surfaces": ["goal"],
       "capability_confidence": "known"
     },
-    "human_confirmations": ["dependency_install", "large_diff", "config_change"],
+    "human_confirmations": ["large_diff", "config_change"],
     "report": ["what_changed", "commands_run", "gate_result", "risks_or_blockers", "next_steps"]
   }
 }
@@ -64,11 +69,24 @@ Scope:
 - Include: `<allowed paths or areas>`
 - Exclude: `.env`, `.env.*`, `secrets/**`, generated output, and unrelated code.
 
+Surface:
+- `goal`: run a bounded local gate in the current session.
+- `loop`: hand off read-only external-state checks to a proven host-native loop with an interval and terminal conditions.
+- `routine`: hand off read-only recurring reports to a proven host-native routine with source, cadence, timezone, access scope, and report format.
+
 Allowed:
 - Read relevant files.
 - Make small scoped edits.
 - Run the declared gate command.
-- Run only these lockfile-frozen dependency setup commands when needed: `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
+- After explicit `dependency_setup` confirmation, run only these lockfile-frozen commands when declared by the contract: `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
+- For `loop` and `routine`, read external state/source and create reports only; do not edit code or mutate external state.
+
+Confirmation behavior:
+- Top-level `required_user_confirmation` lists approvals required before execution starts.
+- Contract `human_confirmations` lists conditional gates to ask for only if that action is encountered.
+- Every top-level required confirmation must also appear in contract `human_confirmations`.
+- `dependency_setup` appears in both lists only when `install_locked_dependencies` is allowed.
+- `external_access` appears in both lists for executable `loop` and `routine` contracts.
 
 Forbidden:
 - Read or edit secrets.
@@ -78,6 +96,7 @@ Forbidden:
 
 Gate:
 - `<safe verification command or checklist>`
+- Command gates use one local verifier command only; no shell pipelines/control operators, dependency changes, git mutation, release actions, downloads, external-state tools, or sensitive path references.
 
 Stop:
 - Gate passes.

@@ -15,7 +15,7 @@
 当前代码已经完成了 **LoopPilot v0：Agent-native loop-check** 的核心交付形态，并继续补齐了本文档先前列出的主要未完成项：
 
 - 已有共享 core：规则、decision schema、contract template。
-- 已有 49 条 decision fixtures，覆盖 `NO_GO`、`PLAN_ONLY`、`RUN_WITH_CONTRACT`，并包含 Claude Code `/loop`-aware `recommended_surface` 示例。
+- 已有 52 条 decision fixtures，覆盖 `NO_GO`、`PLAN_ONLY`、`RUN_WITH_CONTRACT`，并包含 capability-aware `goal`、`loop`、`routine` 示例。
 - 已有 Codex 与 Claude Code wrapper，并且 wrapper 明确引用共享 core，不复制规则。
 - 已有 Claude Code command alias。
 - 已有 fixture validator、wrapper validator、统一 test 命令。
@@ -24,7 +24,7 @@
 
 当前仍需注意的边界：
 
-- Schema 校验当前采用本地 runtime JSON Schema evaluator + Ajv cross-check + schema drift + safety validator 组合实现；即使不接外部 provider，也能在本仓库内验证 fixtures 与 schema 兼容性。
+- Schema 校验当前采用由 Ajv 在构建时生成的独立 validator、生成文件漂移检查和语义 safety validator；运行时不依赖 Ajv 包。
 - Export fallback 已提供模板和显式 `looppilot export` 命令，但仍只是 handoff，不是受控执行。
 - Scan helper 已实现只读摘要，但不参与自动 decision；它只是给当前 agent 提供可选证据。
 - LoopPilot 仍然不做 runner、provider registry、scheduler、GitHub issue queue、自动 commit/push/deploy。
@@ -40,7 +40,7 @@
 | JSON first | 每次判断先输出可校验 JSON | 已在规则和 wrapper 中要求 | qualification rules、Codex/Claude wrapper 均写明 | v0 完成，需继续用测试约束 |
 | Host capability gate | host 能力未知不能 `RUN_WITH_CONTRACT` | 已完成 | core 规则、schema、validator 均检查 `capability_confidence` | v0 完成 |
 | Contract template | `RUN_WITH_CONTRACT` 必须显示 contract | 已完成 | contract template 已存在 | v0 完成 |
-| 49 fixtures | 至少 45 条，三类各 15 条 | 已完成 | `.looppilot/fixtures/decision-fixtures.jsonl` 有 49 行 | v0 完成 |
+| 52 fixtures | 至少 45 条，三类各 15 条 | 已完成 | `.looppilot/fixtures/decision-fixtures.jsonl` 有 52 行 | v0 完成 |
 | Fixture validator | 校验 schema 与 expected fields | 已完成 | `scripts/validate-fixtures.mjs`、`scripts/validate-schema.mjs` 与 `decision-validator.mjs` | v0 完成 |
 | Wrapper parity | Codex 与 Claude Code 同一任务 decision 一致 | 已增强 | `scripts/validate-wrapper-parity.mjs` 检查 workflow 与 guardrails 同构，`npm run eval:wrapper-parity` 校验 golden output safety fields | v0 完成 |
 | Codex wrapper | `.agents/skills/looppilot/SKILL.md` | 已完成 | 文件存在并引用 core | v0 完成 |
@@ -83,11 +83,11 @@
 
 ### 3.2 Decision fixtures
 
-当前 `.looppilot/fixtures/decision-fixtures.jsonl` 有 49 行 fixture，满足 PRD 和技术设计要求：
+当前 `.looppilot/fixtures/decision-fixtures.jsonl` 有 52 行 fixture，满足 PRD 和技术设计要求：
 
 - 15 个 `NO_GO`
-- 17 个 `PLAN_ONLY`
-- 17 个 `RUN_WITH_CONTRACT`
+- 18 个 `PLAN_ONLY`
+- 19 个 `RUN_WITH_CONTRACT`
 - 覆盖 `recommended_surface` 的 `manual`、`plan`、`goal`、`loop`、`routine` 示例
 
 完成点：
@@ -192,7 +192,7 @@ scripts/looppilot.mjs
 已新增：
 
 - `scripts/lib/schema-validator.mjs`：检查 decision schema 与本地安全 validator 的 required fields、enum、contract required fields 是否漂移。
-- `scripts/validate-schema.mjs`：对 49 条 fixtures 的 `expected_decision` 做 schema-compatible validation。
+- `scripts/validate-schema.mjs`：对 52 条 fixtures 的 `expected_decision` 做 schema-compatible validation。
 - `scripts/validate-schema-ajv.mjs`：用 Ajv 对 fixtures 做交叉校验，避免本地 evaluator 与标准 JSON Schema 行为长期漂移。
 - `npm test` 已纳入 schema validation。
 
@@ -529,7 +529,7 @@ node scripts/looppilot.mjs install --target both --scope project --dry-run
 - [x] 共享 core 存在。
 - [x] decision schema 存在。
 - [x] contract template 存在。
-- [x] 49 fixtures 存在。
+- [x] 52 fixtures 存在。
 - [x] Codex wrapper 存在。
 - [x] Claude wrapper 存在。
 - [x] Claude command alias 存在且不复制规则。
@@ -591,22 +591,22 @@ git diff --check
 ```text
 npm test:
 - Schema validation passed.
-- Ajv schema validation passed for 49 fixtures and negative probes.
-- Fixture distribution: 15 NO_GO, 17 PLAN_ONLY, 17 RUN_WITH_CONTRACT.
+- Ajv-generated schema validation passed for 52 fixtures and negative probes.
+- Fixture distribution: 15 NO_GO, 18 PLAN_ONLY, 19 RUN_WITH_CONTRACT.
 - Wrapper, wrapper parity, scan, scan security, Claude project summary, host capability summary, export, fixture coverage, save command, manual template, review-gate template, package contents/runtime smoke, docs consistency, install, and CLI argument validation passed.
 
 eval:wrapper-parity:
-- Golden wrapper output parity passed for 4 fixtures.
+- Golden wrapper output parity passed for 6 fixtures, including capability-aware surface differences.
 
 doctor --target both --json:
 - ok: true
-- package: @looppilot/cli@0.2.0
+- package: @looppilot/cli@0.4.0
 - installedFileCount: 19
 - missingFileCount: 0
 - core files include uppercase v1 templates and helper scripts.
 
 npm pack --dry-run:
-- Package version: 0.2.0
+- Package version: 0.4.0
 - includes uppercase v1 templates, issue-intake helper scripts, and docs/progress notes.
 - excludes generated `.looppilot/exports/`, `.looppilot/latest-*`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md`.
 

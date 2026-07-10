@@ -41,7 +41,7 @@ const taxonomyMatrix = [
     safetyRationale: "Unknown host capabilities force PLAN_ONLY because execution guarantees cannot be verified.",
   },
   {
-    category: "dependency_install",
+    category: "dependency_setup_or_mutation",
     minExamples: 2,
     pattern: /dependenc|install/i,
     // Dependency installs can run arbitrary lifecycle scripts and change the trusted execution surface for every later loop round.

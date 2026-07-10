@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://looppilot.local/schemas/decision-schema.json",
+  "$id": "https://looppilot.local/schemas/decision-schema-v2.json",
   "title": "LoopPilot Decision",
   "type": "object",
   "additionalProperties": false,
@@ -61,7 +61,7 @@
     "required_user_confirmation": {
       "type": "array",
       "items": {
-        "enum": ["dependency_install", "large_diff", "config_change", "risky_path", "write_files", "run_commands", "save_files"]
+        "enum": ["dependency_setup", "external_access", "large_diff", "config_change", "risky_path", "write_files", "run_commands", "save_files"]
       },
       "uniqueItems": true
     },
@@ -73,6 +73,7 @@
         "scope",
         "allowed_actions",
         "forbidden_actions",
+        "surface_config",
         "gate",
         "stop_conditions",
         "max_rounds",
@@ -92,6 +93,7 @@
           "properties": {
             "include": {
               "type": "array",
+              "minItems": 1,
               "items": { "type": "string", "minLength": 1 }
             },
             "exclude": {
@@ -104,7 +106,7 @@
           "type": "array",
           "minItems": 1,
           "items": {
-            "enum": ["read_files", "edit_small_scope", "run_test_command", "run_lint_command", "create_report", "ask_user"]
+            "enum": ["read_files", "read_external_state", "read_external_source", "edit_small_scope", "run_test_command", "run_lint_command", "install_locked_dependencies", "create_report", "ask_user"]
           },
           "uniqueItems": true
         },
@@ -112,9 +114,12 @@
           "type": "array",
           "minItems": 1,
           "items": {
-            "enum": ["edit_secrets", "change_auth_or_payment", "install_dependencies", "git_commit", "git_push", "deploy", "delete_files", "large_refactor"]
+            "enum": ["edit_secrets", "change_auth_or_payment", "mutate_dependencies", "git_commit", "git_push", "deploy", "delete_files", "large_refactor", "mutate_external_state"]
           },
           "uniqueItems": true
+        },
+        "surface_config": {
+          "$ref": "#/$defs/surfaceConfig"
         },
         "gate": {
           "type": "object",
@@ -131,7 +136,21 @@
               "type": "string",
               "minLength": 1
             }
-          }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "type": { "const": "command" } },
+                "required": ["type"]
+              },
+              "then": {
+                "properties": { "command": { "type": "string", "minLength": 1 } }
+              },
+              "else": {
+                "properties": { "command": { "type": "null" } }
+              }
+            }
+          ]
         },
         "stop_conditions": {
           "type": "array",
@@ -139,12 +158,18 @@
           "items": {
             "enum": ["gate_passes", "max_rounds_reached", "same_failure_twice", "forbidden_action_needed", "user_interrupt", "scope_expands", "no_progress"]
           },
-          "uniqueItems": true
+          "uniqueItems": true,
+          "allOf": [
+            { "contains": { "const": "gate_passes" } },
+            { "contains": { "const": "max_rounds_reached" } },
+            { "contains": { "const": "forbidden_action_needed" } },
+            { "contains": { "const": "user_interrupt" } }
+          ]
         },
         "max_rounds": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 10
+          "maximum": 365
         },
         "host_capabilities": {
           "$ref": "#/$defs/hostCapabilities"
@@ -152,7 +177,7 @@
         "human_confirmations": {
           "type": "array",
           "items": {
-            "enum": ["dependency_install", "large_diff", "config_change", "risky_path", "write_files", "run_commands", "save_files"]
+            "enum": ["dependency_setup", "external_access", "large_diff", "config_change", "risky_path", "write_files", "run_commands", "save_files"]
           },
           "uniqueItems": true
         },
@@ -177,6 +202,7 @@
         "can_run_commands",
         "has_approval_flow",
         "supports_skills_or_commands",
+        "supported_surfaces",
         "capability_confidence"
       ],
       "properties": {
@@ -195,13 +221,86 @@
         "supports_skills_or_commands": {
           "type": "boolean"
         },
+        "supported_surfaces": {
+          "type": "array",
+          "items": {
+            "enum": ["goal", "loop", "routine"]
+          },
+          "uniqueItems": true
+        },
         "capability_confidence": {
           "enum": ["known", "unknown"]
         }
       }
+    },
+    "surfaceConfig": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "const": "goal" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "source", "interval_seconds", "terminal_conditions"],
+          "properties": {
+            "type": { "const": "loop" },
+            "source": { "type": "string", "minLength": 1 },
+            "interval_seconds": { "type": "integer", "minimum": 30, "maximum": 86400 },
+            "terminal_conditions": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "source", "cadence", "access_scope", "report_format"],
+          "properties": {
+            "type": { "const": "routine" },
+            "source": { "type": "string", "minLength": 1 },
+            "cadence": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "expression", "timezone"],
+              "properties": {
+                "type": { "enum": ["interval", "cron"] },
+                "expression": { "type": "string", "minLength": 1 },
+                "timezone": { "type": "string", "minLength": 1 }
+              }
+            },
+            "access_scope": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "uniqueItems": true
+            },
+            "report_format": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
     }
   },
   "allOf": [
+    {
+      "if": {
+        "properties": { "needs_clarification": { "const": true } },
+        "required": ["needs_clarification"]
+      },
+      "then": {
+        "properties": { "clarifying_question": { "type": "string", "minLength": 1 } }
+      },
+      "else": {
+        "properties": { "clarifying_question": { "type": "null" } }
+      }
+    },
     {
       "if": {
         "properties": {
@@ -213,15 +312,126 @@
       },
       "then": {
         "properties": {
+          "recommended_surface": {
+            "enum": ["goal", "loop", "routine"]
+          },
           "contract": {
             "type": "object"
-          }
+          },
+          "needs_clarification": { "const": false },
+          "safe_alternative": { "type": "null" },
+          "next_prompt": { "type": "null" },
+          "plan_outputs": { "maxItems": 0 }
         }
       },
       "else": {
         "properties": {
           "contract": {
             "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "decision": { "const": "NO_GO" } },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "recommended_surface": { "const": "manual" },
+          "safe_alternative": { "type": "string", "minLength": 1 },
+          "next_prompt": { "type": "string", "minLength": 1 },
+          "plan_outputs": { "maxItems": 0 },
+          "required_user_confirmation": { "maxItems": 0 },
+          "needs_clarification": { "const": false }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "decision": { "const": "PLAN_ONLY" } },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "recommended_surface": { "enum": ["plan", "loop", "routine"] },
+          "safe_alternative": { "type": "null" },
+          "next_prompt": { "type": "string", "minLength": 1 },
+          "plan_outputs": { "minItems": 1 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": { "const": "RUN_WITH_CONTRACT" },
+          "recommended_surface": { "const": "goal" }
+        },
+        "required": ["decision", "recommended_surface"]
+      },
+      "then": {
+        "properties": {
+          "host_capabilities": {
+            "properties": { "supported_surfaces": { "contains": { "const": "goal" } } }
+          },
+          "contract": {
+            "properties": {
+              "surface_config": { "properties": { "type": { "const": "goal" } } },
+              "max_rounds": { "maximum": 10 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": { "const": "RUN_WITH_CONTRACT" },
+          "recommended_surface": { "const": "loop" }
+        },
+        "required": ["decision", "recommended_surface"]
+      },
+      "then": {
+        "properties": {
+          "host_capabilities": {
+            "properties": { "supported_surfaces": { "contains": { "const": "loop" } } }
+          },
+          "required_user_confirmation": {
+            "contains": { "const": "external_access" }
+          },
+          "contract": {
+            "properties": {
+              "surface_config": { "properties": { "type": { "const": "loop" } } },
+              "human_confirmations": { "contains": { "const": "external_access" } },
+              "max_rounds": { "maximum": 100 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": { "const": "RUN_WITH_CONTRACT" },
+          "recommended_surface": { "const": "routine" }
+        },
+        "required": ["decision", "recommended_surface"]
+      },
+      "then": {
+        "properties": {
+          "host_capabilities": {
+            "properties": { "supported_surfaces": { "contains": { "const": "routine" } } }
+          },
+          "required_user_confirmation": {
+            "contains": { "const": "external_access" }
+          },
+          "contract": {
+            "properties": {
+              "surface_config": { "properties": { "type": { "const": "routine" } } },
+              "human_confirmations": { "contains": { "const": "external_access" } },
+              "max_rounds": { "maximum": 365 }
+            }
           }
         }
       }

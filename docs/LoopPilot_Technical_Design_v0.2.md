@@ -203,7 +203,8 @@ Output fields:
     "can_edit_files": true,
     "can_run_commands": true,
     "has_approval_flow": true,
-    "capability_confidence": "known"
+    "capability_confidence": "known",
+    "supported_surfaces": ["goal"]
   },
   "reasons": [],
   "safe_alternative": "",
@@ -236,7 +237,8 @@ Output fields:
     "can_edit_files": true,
     "can_run_commands": true,
     "has_approval_flow": true,
-    "capability_confidence": "known"
+    "capability_confidence": "known",
+    "supported_surfaces": ["goal"]
   },
   "reasons": [],
   "plan_outputs": ["risk_analysis", "task_breakdown", "candidate_gate"],
@@ -292,7 +294,8 @@ Shape:
   "can_run_commands": true,
   "has_approval_flow": true,
   "supports_skills_or_commands": true,
-  "capability_confidence": "known"
+  "capability_confidence": "known",
+  "supported_surfaces": ["goal"]
 }
 ```
 
@@ -428,51 +431,34 @@ Shape:
     "can_edit_files": true,
     "can_run_commands": true,
     "has_approval_flow": true,
-    "capability_confidence": "known"
+    "capability_confidence": "known",
+    "supported_surfaces": ["goal"]
   },
-  "goal": "Fix the current failing test",
-  "scope": {
-    "include": ["src/**", "tests/**"],
-    "exclude": [".env", "secrets/**", "dist/**"]
-  },
-  "allowed_actions": [
-    "read_files",
-    "edit_small_scope",
-    "run_test_command"
-  ],
-  "forbidden_actions": [
-    "edit_secrets",
-    "change_auth_or_payment",
-    "install_dependencies",
-    "git_commit",
-    "git_push",
-    "deploy"
-  ],
-  "gate": {
-    "type": "command",
-    "command": "npm test",
-    "expect": "exit_zero"
-  },
-  "stop_conditions": [
-    "gate_passes",
-    "max_rounds_reached",
-    "same_failure_twice",
-    "forbidden_action_needed",
-    "user_interrupt"
-  ],
-  "max_rounds": 5,
-  "human_confirmations": [
-    "dependency_install",
-    "large_diff",
-    "config_change"
-  ],
-  "report": [
-    "what_changed",
-    "commands_run",
-    "gate_result",
-    "risks_or_blockers",
-    "next_steps"
-  ]
+  "reasons": ["The goal and gate are bounded."],
+  "contract": {
+    "goal": "Fix the current failing test",
+    "scope": {
+      "include": ["src/**", "tests/**"],
+      "exclude": [".env", "secrets/**", "dist/**"]
+    },
+    "allowed_actions": ["read_files", "edit_small_scope", "run_test_command"],
+    "forbidden_actions": ["edit_secrets", "change_auth_or_payment", "mutate_dependencies", "git_commit", "git_push", "deploy"],
+    "gate": {"type": "command", "command": "npm test", "expect": "exit_zero"},
+    "stop_conditions": ["gate_passes", "max_rounds_reached", "same_failure_twice", "forbidden_action_needed", "user_interrupt"],
+    "max_rounds": 5,
+    "host_capabilities": {
+      "host": "codex",
+      "can_edit_files": true,
+      "can_run_commands": true,
+      "has_approval_flow": true,
+      "supports_skills_or_commands": true,
+      "capability_confidence": "known",
+      "supported_surfaces": ["goal"]
+    },
+    "human_confirmations": ["large_diff", "config_change"],
+    "report": ["what_changed", "commands_run", "gate_result", "risks_or_blockers", "next_steps"],
+    "surface_config": {"type": "goal"}
+  }
 }
 ```
 

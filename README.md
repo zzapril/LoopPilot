@@ -65,7 +65,7 @@ Dependency setup is limited to existing-lockfile commands: `pnpm install --froze
 
 ## Install
 
-Current repository version: `@looppilot/cli@0.3.0`.
+Current repository version: `@looppilot/cli@0.4.0` release candidate.
 
 Latest published npm version: `@looppilot/cli@0.3.0`.
 
@@ -76,6 +76,10 @@ npm install -g @looppilot/cli
 looppilot install
 looppilot doctor
 ```
+
+`install` refuses symbolic-link path components in Agent Pack destinations, so it cannot silently write outside the selected project. `doctor` verifies that installed pack files match the running package and tells you to use `looppilot install --force` when a copy is stale.
+
+Explicit export, save, doctor-report, and issue-intake outputs use atomic replacement and refuse project-internal symbolic-link escapes, case-variant Agent Pack paths, dependency manifests/lockfiles, and sensitive destinations. Save commands also reject sensitive source paths.
 
 For a one-off trial:
 
@@ -127,6 +131,8 @@ Use these as starting points inside your current agent session:
 | `loop` | The task is safe but mainly waits for external state, such as CI, deploy status, PR review, issue updates, or queue status. |
 | `routine` | The user is asking for recurring work with cadence, source, permissions, report format, and stop conditions. |
 
+`RUN_WITH_CONTRACT` additionally requires the host profile to list the selected surface in `supported_surfaces`, and the contract must carry a matching `surface_config`. `loop` and `routine` contracts are read-only: they can inspect external state/source and report, but they cannot edit code or mutate external systems. If a loop discovers a code change is needed, LoopPilot creates a separate `goal` decision.
+
 ## Execution-mode examples
 
 ### 1. Fix lint until the lint gate passes
@@ -159,7 +165,7 @@ Likely decision: `PLAN_ONLY` with `recommended_surface: "plan"` when comments, l
 /should-loop wait for CI and summarize failures
 ```
 
-Likely decision: `RUN_WITH_CONTRACT` with `recommended_surface: "loop"` when the task is bounded to waiting for terminal CI status and summarizing failures.
+Likely decision: `RUN_WITH_CONTRACT` with `recommended_surface: "loop"` only when the host proves loop support and the contract declares a source, interval, terminal conditions, and bounded checks. Otherwise it remains `PLAN_ONLY` with the same recommended surface.
 
 ### 5. Daily feedback summary
 
@@ -167,7 +173,7 @@ Likely decision: `RUN_WITH_CONTRACT` with `recommended_surface: "loop"` when the
 /should-loop every morning summarize user feedback
 ```
 
-Likely decision: `PLAN_ONLY` with `recommended_surface: "routine"` until cadence, source, permissions, report format, and stop conditions are explicit.
+Likely decision: `PLAN_ONLY` with `recommended_surface: "routine"` until cadence, source, access scope, report format, stop conditions, and host routine support are explicit.
 
 ### 6. Keep improving until quality is best
 
@@ -182,6 +188,8 @@ Large refactors, production deploys, publishing, secrets, auth/payment changes, 
 ## GitHub issue intake boundary
 
 For GitHub issue URLs, the installed wrapper may call `.looppilot/scripts/issue-intake.mjs` or the debug CLI command `looppilot issue-intake`. The helper reads only the single issue title, body, labels, state, author, timestamps, URL, and comments count.
+
+Issue URLs must be canonical HTTPS GitHub URLs without embedded credentials or non-standard ports. Markdown output escapes untrusted inline metadata, while the issue body stays inside a dynamically sized code fence.
 
 It does not read comments, linked pull requests, attachments, logs, timeline events, or issue lists by default.
 
@@ -243,11 +251,11 @@ These files are not runner state, approval gates, deployment gates, release gate
 Implemented:
 
 - Shared LoopPilot core rules, decision schema, contract template, report/export templates, and v1 manual artifact templates including review gates.
-- 49 decision fixtures covering `NO_GO`, `PLAN_ONLY`, and `RUN_WITH_CONTRACT`, including Claude Code `/loop`-aware `recommended_surface` examples.
+- 52 decision fixtures covering `NO_GO`, `PLAN_ONLY`, and `RUN_WITH_CONTRACT`, including host-capability-aware `goal`, `loop`, and `routine` contracts.
 - Codex and Claude Code wrappers that reference the same shared core.
 - Claude Code `should-loop` command alias that points to the Claude skill without duplicating rules.
 - Agent-native GitHub issue URL intake for Codex and Claude Code, backed by a read-only issue-intake helper.
-- Validation scripts for fixtures, runtime JSON Schema checks, schema drift, wrapper references, wrapper parity, scan safety, export behavior, save commands, docs consistency, package contents, and install/doctor integration.
+- Validation scripts for fixtures, decision-state invariants, safe single-command gates, self-contained generated JSON Schema checks, exact schema drift, capability-aware wrapper parity with dataset integrity checks, bounded scan safety, transactional and symlink-safe install/output behavior, protected Agent Pack paths, installed-pack integrity, strict CLI arguments, issue URL/Markdown safety, export/save behavior, docs consistency, package contents, and install/doctor integration.
 
 Not implemented by design:
 
@@ -255,7 +263,7 @@ Not implemented by design:
 - No background daemon.
 - No model provider registry.
 - No scheduled loop platform or GitHub issue queue.
-- No automatic commit, push, deploy, publish, dependency mutation, `package.json` edits, lockfile edits, issue closing, PR creation, or GitHub write action; dependency setup is limited to `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
+- No automatic commit, push, deploy, publish, dependency mutation, `package.json` edits, lockfile edits, issue closing, PR creation, or GitHub write action; explicitly confirmed dependency setup is limited to `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
 
 ## FAQ
 
@@ -279,7 +287,7 @@ looppilot doctor
 
 ### Will LoopPilot commit, push, deploy, or install new dependencies?
 
-No. LoopPilot does not commit, push, deploy, publish, install new dependencies, edit `package.json`, or edit lockfiles. Dependency setup is limited to existing-lockfile commands: `pnpm install --frozen-lockfile`, `npm ci`, or `bun install --frozen-lockfile`.
+No. LoopPilot does not commit, push, deploy, publish, install new dependencies, edit `package.json`, or edit lockfiles. Existing-lockfile setup is allowed only when the contract declares `install_locked_dependencies` and the user explicitly confirms `dependency_setup`.
 
 ## License
 

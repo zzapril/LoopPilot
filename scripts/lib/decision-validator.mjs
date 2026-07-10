@@ -3,7 +3,8 @@ import fs from "node:fs";
 const DECISIONS = new Set(["NO_GO", "PLAN_ONLY", "RUN_WITH_CONTRACT"]);
 const RECOMMENDED_SURFACES = new Set(["manual", "plan", "goal", "loop", "routine"]);
 const RUN_WITH_CONTRACT_SURFACES = new Set(["goal", "loop", "routine"]);
-const PLAN_ONLY_SURFACES = new Set(["plan", "routine"]);
+const PLAN_ONLY_SURFACES = new Set(["plan", "loop", "routine"]);
+const EXECUTABLE_SURFACES = new Set(["goal", "loop", "routine"]);
 const CONFIDENCE = new Set(["low", "medium", "high"]);
 const HOSTS = new Set(["codex", "claude_code", "unknown"]);
 const CAPABILITY_CONFIDENCE = new Set(["known", "unknown"]);
@@ -15,7 +16,8 @@ const PLAN_OUTPUTS = new Set([
   "implementation_plan",
 ]);
 const CONFIRMATIONS = new Set([
-  "dependency_install",
+  "dependency_setup",
+  "external_access",
   "large_diff",
   "config_change",
   "risky_path",
@@ -25,21 +27,25 @@ const CONFIRMATIONS = new Set([
 ]);
 const ALLOWED_ACTIONS = new Set([
   "read_files",
+  "read_external_state",
+  "read_external_source",
   "edit_small_scope",
   "run_test_command",
   "run_lint_command",
+  "install_locked_dependencies",
   "create_report",
   "ask_user",
 ]);
 const FORBIDDEN_ACTIONS = new Set([
   "edit_secrets",
   "change_auth_or_payment",
-  "install_dependencies",
+  "mutate_dependencies",
   "git_commit",
   "git_push",
   "deploy",
   "delete_files",
   "large_refactor",
+  "mutate_external_state",
 ]);
 const GATE_TYPES = new Set(["command", "checklist", "file_output", "report_review"]);
 const STOP_CONDITIONS = new Set([
@@ -82,8 +88,109 @@ const HOST_CAPABILITY_KEYS = [
   "can_run_commands",
   "has_approval_flow",
   "supports_skills_or_commands",
+  "supported_surfaces",
   "capability_confidence",
 ];
+
+const EXTERNAL_SURFACE_ACTIONS = new Set([
+  "read_files",
+  "read_external_state",
+  "read_external_source",
+  "create_report",
+  "ask_user",
+]);
+
+const FORBIDDEN_GATE_EXECUTABLES = new Set([
+  "rm", "rmdir", "mv", "cp", "chmod", "chown", "dd", "mkfs", "kill", "pkill",
+  "del", "erase", "rd", "move", "copy",
+  "curl", "wget", "ssh", "scp", "rsync", "sudo", "npx", "pnpx", "bunx",
+  "powershell", "pwsh", "command", "exec", "xargs", "nice", "nohup", "timeout",
+]);
+const FORBIDDEN_PACKAGE_COMMANDS = new Set([
+  "add", "ci", "config", "create", "deploy", "dlx", "install", "link", "publish", "remove", "set", "uninstall", "update", "upgrade",
+]);
+const FORBIDDEN_GIT_COMMANDS = new Set([
+  "add", "branch", "checkout", "clean", "commit", "merge", "push", "rebase", "reset", "restore", "switch", "tag",
+]);
+
+function firstCommandArgument(tokens) {
+  return tokens.find((token) => !token.startsWith("-"))?.toLowerCase() ?? "";
+}
+
+function commandReferencesSensitivePath(command) {
+  return command.split(/\s+/).some((rawToken) => {
+    const unquoted = rawToken.replace(/^["']+|["',]+$/g, "");
+    const token = (unquoted.split("=").at(-1) ?? "").replaceAll("\\", "/").toLowerCase();
+    const segments = token.split("/").filter(Boolean);
+    const basename = segments.at(-1) ?? "";
+    return /^\.env(?:\..*)?$/.test(basename)
+      || [".npmrc", ".pypirc", ".netrc"].includes(basename)
+      || /\.(?:pem|key)$/.test(basename)
+      || segments.some((segment) => ["secrets", ".ssh", ".aws"].includes(segment))
+      || token.endsWith(".docker/config.json")
+      || token.endsWith(".config/gh/hosts.yml");
+  });
+}
+
+function unsafeGateCommandReason(command) {
+  if (commandReferencesSensitivePath(command)) {
+    return "cannot read or validate sensitive paths";
+  }
+  if (/[\r\n;&|`<>]|\$\(/.test(command)) return "must be one simple verifier command without shell control operators";
+  const tokens = command.trim().split(/\s+/);
+  if (tokens[0]?.toLowerCase() === "env") {
+    tokens.shift();
+    if (tokens[0]?.startsWith("-")) return "cannot use env wrapper flags in a gate command";
+  }
+  while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0] ?? "")) tokens.shift();
+  const executable = (tokens.shift() ?? "").split(/[\\/]/).pop().toLowerCase();
+  if (FORBIDDEN_GATE_EXECUTABLES.has(executable)) return `cannot use mutating or external executable ${executable}`;
+  if (["sh", "bash", "zsh", "fish", "cmd"].includes(executable) && tokens.some((token) => ["-c", "/c"].includes(token.toLowerCase()))) {
+    return `cannot execute inline shell code through ${executable}`;
+  }
+  if (["node", "python", "python3", "ruby", "perl"].includes(executable)
+    && tokens.some((token) => ["-e", "--eval", "-c"].includes(token.toLowerCase()))) {
+    return `cannot execute inline code through ${executable}`;
+  }
+  if (["npm", "pnpm", "yarn", "bun"].includes(executable)) {
+    const subcommand = firstCommandArgument(tokens);
+    if (FORBIDDEN_PACKAGE_COMMANDS.has(subcommand)) return `cannot use dependency or publish command ${executable} ${subcommand}`;
+    if (subcommand === "run") {
+      const runIndex = tokens.findIndex((token) => token.toLowerCase() === "run");
+      const script = tokens.slice(runIndex + 1).find((token) => !token.startsWith("-"))?.toLowerCase() ?? "";
+      if (/^(pre|post)?(deploy|publish|release)(:|$)/.test(script)) return `cannot use release script ${script}`;
+    }
+  }
+  if (executable === "git") {
+    const subcommand = tokens.map((token) => token.toLowerCase()).find((token) => FORBIDDEN_GIT_COMMANDS.has(token));
+    if (subcommand) return `cannot use mutating git command git ${subcommand}`;
+  }
+  if (executable === "docker" && tokens.some((token) => ["push", "rm", "rmi"].includes(token.toLowerCase()))) {
+    return "cannot use a mutating Docker command as a gate";
+  }
+  const subcommand = firstCommandArgument(tokens);
+  if (["pip", "pip3"].includes(executable) && ["install", "uninstall"].includes(subcommand)) {
+    return `cannot use dependency command ${executable} ${subcommand}`;
+  }
+  if (executable === "cargo" && ["add", "install", "publish", "remove"].includes(subcommand)) {
+    return `cannot use dependency or publish command cargo ${subcommand}`;
+  }
+  if (executable === "go" && ["get", "install"].includes(subcommand)) {
+    return `cannot use dependency command go ${subcommand}`;
+  }
+  if (["mvn", "mvnw", "gradle", "gradlew"].includes(executable)
+    && tokens.some((token) => /(^|:)(deploy|publish|release)$/.test(token.toLowerCase()))) {
+    return `cannot use release task through ${executable}`;
+  }
+  if (["make", "just", "task"].includes(executable)
+    && tokens.some((token) => /^(deploy|publish|release)(:|$)/.test(token.toLowerCase()))) {
+    return `cannot use release target through ${executable}`;
+  }
+  if (["kubectl", "terraform", "tofu", "helm", "gh"].includes(executable)) {
+    return `cannot use external-state command ${executable} as a local gate`;
+  }
+  return null;
+}
 
 function fail(errors, path, message) {
   errors.push(`${path}: ${message}`);
@@ -101,7 +208,7 @@ function validateStringArray(value, allowedSet, path, errors, options = {}) {
 
   const seen = new Set();
   value.forEach((entry, index) => {
-    if (typeof entry !== "string" || entry.length === 0) {
+    if (typeof entry !== "string" || entry.trim().length === 0) {
       fail(errors, `${path}[${index}]`, "must be a non-empty string");
       return;
     }
@@ -148,6 +255,7 @@ export function validateHostCapabilities(host, path = "host_capabilities") {
     "can_run_commands",
     "has_approval_flow",
     "supports_skills_or_commands",
+    "supported_surfaces",
     "capability_confidence",
   ];
   for (const key of required) {
@@ -161,11 +269,57 @@ export function validateHostCapabilities(host, path = "host_capabilities") {
   if (!CAPABILITY_CONFIDENCE.has(host.capability_confidence)) {
     fail(errors, `${path}.capability_confidence`, "must be known or unknown");
   }
+  validateStringArray(host.supported_surfaces, EXECUTABLE_SURFACES, `${path}.supported_surfaces`, errors);
 
   return errors;
 }
 
-export function validateContract(contract, decisionHost, path = "contract") {
+function validateSurfaceConfig(config, path, errors) {
+  if (!isObject(config)) {
+    fail(errors, path, "must be an object");
+    return;
+  }
+
+  if (!EXECUTABLE_SURFACES.has(config.type)) {
+    fail(errors, `${path}.type`, "must be goal, loop, or routine");
+    return;
+  }
+
+  if (config.type === "loop") {
+    if (typeof config.source !== "string" || config.source.trim().length === 0) fail(errors, `${path}.source`, "must be a non-empty string");
+    if (!Number.isInteger(config.interval_seconds) || config.interval_seconds < 30 || config.interval_seconds > 86400) {
+      fail(errors, `${path}.interval_seconds`, "must be an integer from 30 to 86400");
+    }
+    validateStringArray(config.terminal_conditions, null, `${path}.terminal_conditions`, errors, { minItems: 1 });
+  }
+
+  if (config.type === "routine") {
+    if (typeof config.source !== "string" || config.source.trim().length === 0) fail(errors, `${path}.source`, "must be a non-empty string");
+    if (!isObject(config.cadence)) {
+      fail(errors, `${path}.cadence`, "must be an object");
+    } else {
+      if (!["interval", "cron"].includes(config.cadence.type)) fail(errors, `${path}.cadence.type`, "must be interval or cron");
+      for (const field of ["expression", "timezone"]) {
+        if (typeof config.cadence[field] !== "string" || config.cadence[field].trim().length === 0) {
+          fail(errors, `${path}.cadence.${field}`, "must be a non-empty string");
+        }
+      }
+    }
+    validateStringArray(config.access_scope, null, `${path}.access_scope`, errors, { minItems: 1 });
+    if (typeof config.report_format !== "string" || config.report_format.trim().length === 0) {
+      fail(errors, `${path}.report_format`, "must be a non-empty string");
+    }
+  }
+}
+
+function capabilityValuesEqual(a, b) {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+  }
+  return a === b;
+}
+
+export function validateContract(contract, decisionHost, recommendedSurface, path = "contract") {
   const errors = [];
   if (!isObject(contract)) {
     fail(errors, path, "must be an object for RUN_WITH_CONTRACT");
@@ -177,6 +331,7 @@ export function validateContract(contract, decisionHost, path = "contract") {
     "scope",
     "allowed_actions",
     "forbidden_actions",
+    "surface_config",
     "gate",
     "stop_conditions",
     "max_rounds",
@@ -188,24 +343,49 @@ export function validateContract(contract, decisionHost, path = "contract") {
     if (!(key in contract)) fail(errors, `${path}.${key}`, "is required");
   }
 
-  if (typeof contract.goal !== "string" || contract.goal.length === 0) {
+  if (typeof contract.goal !== "string" || contract.goal.trim().length === 0) {
     fail(errors, `${path}.goal`, "must be a non-empty string");
   }
 
   if (!isObject(contract.scope)) {
     fail(errors, `${path}.scope`, "must be an object");
   } else {
-    validateStringArray(contract.scope.include, null, `${path}.scope.include`, errors);
+    validateStringArray(contract.scope.include, null, `${path}.scope.include`, errors, { minItems: 1 });
     validateStringArray(contract.scope.exclude, null, `${path}.scope.exclude`, errors);
   }
 
   validateStringArray(contract.allowed_actions, ALLOWED_ACTIONS, `${path}.allowed_actions`, errors, { minItems: 1 });
   validateStringArray(contract.forbidden_actions, FORBIDDEN_ACTIONS, `${path}.forbidden_actions`, errors, { minItems: 1 });
 
-  for (const requiredForbidden of ["edit_secrets", "install_dependencies", "git_commit", "git_push", "deploy"]) {
+  for (const requiredForbidden of ["edit_secrets", "mutate_dependencies", "git_commit", "git_push", "deploy"]) {
     if (!contract.forbidden_actions?.includes(requiredForbidden)) {
       fail(errors, `${path}.forbidden_actions`, `must include ${requiredForbidden}`);
     }
+  }
+
+  validateSurfaceConfig(contract.surface_config, `${path}.surface_config`, errors);
+  if (contract.surface_config?.type !== recommendedSurface) {
+    fail(errors, `${path}.surface_config.type`, "must match recommended_surface");
+  }
+
+  if (["loop", "routine"].includes(contract.surface_config?.type)) {
+    for (const action of contract.allowed_actions ?? []) {
+      if (!EXTERNAL_SURFACE_ACTIONS.has(action)) {
+        fail(errors, `${path}.allowed_actions`, `${contract.surface_config.type} contracts cannot allow ${action}`);
+      }
+    }
+    if (!contract.forbidden_actions?.includes("mutate_external_state")) {
+      fail(errors, `${path}.forbidden_actions`, "external surface contracts must include mutate_external_state");
+    }
+    if (!contract.human_confirmations?.includes("external_access")) {
+      fail(errors, `${path}.human_confirmations`, "external surface contracts must include external_access");
+    }
+  }
+  if (contract.surface_config?.type === "loop" && !contract.allowed_actions?.includes("read_external_state")) {
+    fail(errors, `${path}.allowed_actions`, "loop contracts must include read_external_state");
+  }
+  if (contract.surface_config?.type === "routine" && !contract.allowed_actions?.includes("read_external_source")) {
+    fail(errors, `${path}.allowed_actions`, "routine contracts must include read_external_source");
   }
 
   if (!isObject(contract.gate)) {
@@ -215,26 +395,38 @@ export function validateContract(contract, decisionHost, path = "contract") {
     if (!(typeof contract.gate.command === "string" || contract.gate.command === null)) {
       fail(errors, `${path}.gate.command`, "must be string or null");
     }
-    if (typeof contract.gate.expect !== "string" || contract.gate.expect.length === 0) {
+    if (typeof contract.gate.expect !== "string" || contract.gate.expect.trim().length === 0) {
       fail(errors, `${path}.gate.expect`, "must be a non-empty string");
+    }
+    if (contract.gate.type === "command") {
+      if (typeof contract.gate.command !== "string" || contract.gate.command.trim().length === 0) {
+        fail(errors, `${path}.gate.command`, "must be a non-empty string for a command gate");
+      } else {
+        const unsafeReason = unsafeGateCommandReason(contract.gate.command);
+        if (unsafeReason) fail(errors, `${path}.gate.command`, unsafeReason);
+      }
+    } else if (contract.gate.command !== null) {
+      fail(errors, `${path}.gate.command`, "must be null unless gate type is command");
     }
   }
 
   validateStringArray(contract.stop_conditions, STOP_CONDITIONS, `${path}.stop_conditions`, errors, { minItems: 2 });
-  for (const requiredStop of ["max_rounds_reached", "forbidden_action_needed", "user_interrupt"]) {
+  for (const requiredStop of ["gate_passes", "max_rounds_reached", "forbidden_action_needed", "user_interrupt"]) {
     if (!contract.stop_conditions?.includes(requiredStop)) {
       fail(errors, `${path}.stop_conditions`, `must include ${requiredStop}`);
     }
   }
 
-  if (!Number.isInteger(contract.max_rounds) || contract.max_rounds < 1 || contract.max_rounds > 10) {
-    fail(errors, `${path}.max_rounds`, "must be an integer from 1 to 10");
+  const maxRoundsBySurface = { goal: 10, loop: 100, routine: 365 };
+  const maxRounds = maxRoundsBySurface[contract.surface_config?.type] ?? 10;
+  if (!Number.isInteger(contract.max_rounds) || contract.max_rounds < 1 || contract.max_rounds > maxRounds) {
+    fail(errors, `${path}.max_rounds`, `must be an integer from 1 to ${maxRounds}`);
   }
 
   errors.push(...validateHostCapabilities(contract.host_capabilities, `${path}.host_capabilities`));
   if (decisionHost && isObject(contract.host_capabilities)) {
     for (const key of HOST_CAPABILITY_KEYS) {
-      if (contract.host_capabilities[key] !== decisionHost[key]) {
+      if (!capabilityValuesEqual(contract.host_capabilities[key], decisionHost[key])) {
         fail(errors, `${path}.host_capabilities.${key}`, "must match decision host capabilities");
       }
     }
@@ -245,6 +437,9 @@ export function validateContract(contract, decisionHost, path = "contract") {
   }
   if (contract.host_capabilities?.supports_skills_or_commands !== true) {
     fail(errors, `${path}.host_capabilities.supports_skills_or_commands`, "must be true for RUN_WITH_CONTRACT");
+  }
+  if (!contract.host_capabilities?.supported_surfaces?.includes(contract.surface_config?.type)) {
+    fail(errors, `${path}.host_capabilities.supported_surfaces`, "must include the contract surface");
   }
   if (contract.allowed_actions?.includes("edit_small_scope") && contract.host_capabilities?.can_edit_files !== true) {
     fail(errors, `${path}.host_capabilities.can_edit_files`, "must be true when the contract allows edits");
@@ -297,6 +492,12 @@ export function validateDecision(decision, path = "decision") {
   if (decision.needs_clarification && !decision.clarifying_question) {
     fail(errors, `${path}.clarifying_question`, "is required when needs_clarification is true");
   }
+  if (decision.needs_clarification && typeof decision.clarifying_question === "string" && decision.clarifying_question.trim().length === 0) {
+    fail(errors, `${path}.clarifying_question`, "must be a non-empty string when clarification is needed");
+  }
+  if (!decision.needs_clarification && decision.clarifying_question !== null) {
+    fail(errors, `${path}.clarifying_question`, "must be null when clarification is not needed");
+  }
 
   errors.push(...validateHostCapabilities(decision.host_capabilities, `${path}.host_capabilities`));
   validateStringArray(decision.reasons, null, `${path}.reasons`, errors, { minItems: 1 });
@@ -317,6 +518,9 @@ export function validateDecision(decision, path = "decision") {
     if (decision.needs_clarification) {
       fail(errors, `${path}.needs_clarification`, "must be false for RUN_WITH_CONTRACT");
     }
+    if (decision.safe_alternative !== null) fail(errors, `${path}.safe_alternative`, "must be null for RUN_WITH_CONTRACT");
+    if (decision.next_prompt !== null) fail(errors, `${path}.next_prompt`, "must be null for RUN_WITH_CONTRACT");
+    if (decision.plan_outputs?.length !== 0) fail(errors, `${path}.plan_outputs`, "must be empty for RUN_WITH_CONTRACT");
     if (decision.host_capabilities?.capability_confidence !== "known") {
       fail(errors, `${path}.host_capabilities.capability_confidence`, "must be known for RUN_WITH_CONTRACT");
     }
@@ -329,7 +533,48 @@ export function validateDecision(decision, path = "decision") {
     if (Array.isArray(decision.required_user_confirmation) && decision.required_user_confirmation.length > 0 && decision.host_capabilities?.has_approval_flow !== true) {
       fail(errors, `${path}.host_capabilities.has_approval_flow`, "must be true when user confirmation is required");
     }
-    errors.push(...validateContract(decision.contract, decision.host_capabilities, `${path}.contract`));
+    if (!decision.host_capabilities?.supported_surfaces?.includes(decision.recommended_surface)) {
+      fail(errors, `${path}.host_capabilities.supported_surfaces`, "must include recommended_surface for RUN_WITH_CONTRACT");
+    }
+    errors.push(...validateContract(decision.contract, decision.host_capabilities, decision.recommended_surface, `${path}.contract`));
+    for (const confirmation of decision.required_user_confirmation ?? []) {
+      if (!decision.contract?.human_confirmations?.includes(confirmation)) {
+        fail(errors, `${path}.contract.human_confirmations`, `must include required confirmation ${confirmation}`);
+      }
+    }
+    const readsExternalState = decision.contract?.allowed_actions?.some(
+      (action) => action === "read_external_state" || action === "read_external_source",
+    );
+    if (readsExternalState) {
+      if (!decision.required_user_confirmation?.includes("external_access")) {
+        fail(errors, `${path}.required_user_confirmation`, "must include external_access when external reads are allowed");
+      }
+      if (!decision.contract?.human_confirmations?.includes("external_access")) {
+        fail(errors, `${path}.contract.human_confirmations`, "must include external_access when external reads are allowed");
+      }
+    } else {
+      if (decision.required_user_confirmation?.includes("external_access")) {
+        fail(errors, `${path}.required_user_confirmation`, "cannot require external_access when external reads are not allowed");
+      }
+      if (decision.contract?.human_confirmations?.includes("external_access")) {
+        fail(errors, `${path}.contract.human_confirmations`, "cannot include external_access when external reads are not allowed");
+      }
+    }
+    if (decision.contract?.allowed_actions?.includes("install_locked_dependencies")) {
+      if (!decision.required_user_confirmation?.includes("dependency_setup")) {
+        fail(errors, `${path}.required_user_confirmation`, "must include dependency_setup when locked dependency setup is allowed");
+      }
+      if (!decision.contract?.human_confirmations?.includes("dependency_setup")) {
+        fail(errors, `${path}.contract.human_confirmations`, "must include dependency_setup when locked dependency setup is allowed");
+      }
+    } else {
+      if (decision.required_user_confirmation?.includes("dependency_setup")) {
+        fail(errors, `${path}.required_user_confirmation`, "cannot require dependency_setup when locked dependency setup is not allowed");
+      }
+      if (decision.contract?.human_confirmations?.includes("dependency_setup")) {
+        fail(errors, `${path}.contract.human_confirmations`, "cannot include dependency_setup when locked dependency setup is not allowed");
+      }
+    }
   } else if (decision.contract !== null) {
     fail(errors, `${path}.contract`, "must be null unless decision is RUN_WITH_CONTRACT");
   }
@@ -339,19 +584,37 @@ export function validateDecision(decision, path = "decision") {
   }
 
   if (decision.decision === "PLAN_ONLY" && !PLAN_ONLY_SURFACES.has(decision.recommended_surface)) {
-    fail(errors, `${path}.recommended_surface`, "must be plan or routine for PLAN_ONLY");
+    fail(errors, `${path}.recommended_surface`, "must be plan, loop, or routine for PLAN_ONLY");
   }
 
   if (decision.host_capabilities?.capability_confidence === "unknown" && decision.decision === "RUN_WITH_CONTRACT") {
     fail(errors, `${path}.decision`, "unknown host capabilities cannot RUN_WITH_CONTRACT");
   }
 
-  if (decision.decision === "NO_GO" && !decision.safe_alternative) {
+  if (decision.decision === "NO_GO"
+    && (typeof decision.safe_alternative !== "string" || decision.safe_alternative.trim().length === 0)) {
     fail(errors, `${path}.safe_alternative`, "is required for NO_GO");
+  }
+
+  if (decision.decision === "NO_GO") {
+    if (decision.needs_clarification) fail(errors, `${path}.needs_clarification`, "must be false for NO_GO");
+    if (typeof decision.next_prompt !== "string" || decision.next_prompt.trim().length === 0) {
+      fail(errors, `${path}.next_prompt`, "must be a non-empty string for NO_GO");
+    }
+    if (decision.plan_outputs?.length !== 0) fail(errors, `${path}.plan_outputs`, "must be empty for NO_GO");
+    if (decision.required_user_confirmation?.length !== 0) {
+      fail(errors, `${path}.required_user_confirmation`, "must be empty for NO_GO");
+    }
   }
 
   if (decision.decision === "PLAN_ONLY" && decision.plan_outputs.length === 0) {
     fail(errors, `${path}.plan_outputs`, "must contain at least one output for PLAN_ONLY");
+  }
+  if (decision.decision === "PLAN_ONLY") {
+    if (decision.safe_alternative !== null) fail(errors, `${path}.safe_alternative`, "must be null for PLAN_ONLY");
+    if (typeof decision.next_prompt !== "string" || decision.next_prompt.trim().length === 0) {
+      fail(errors, `${path}.next_prompt`, "must be a non-empty string for PLAN_ONLY");
+    }
   }
 
   return errors;

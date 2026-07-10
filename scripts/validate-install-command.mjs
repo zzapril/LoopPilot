@@ -7,7 +7,15 @@ import { spawnSync } from "node:child_process";
 const cli = path.resolve("scripts/looppilot.mjs");
 const packageInfo = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const schemaInfo = JSON.parse(fs.readFileSync(".looppilot/core/decision-schema.json", "utf8"));
+const fixtureInfo = fs.readFileSync(".looppilot/fixtures/decision-fixtures.jsonl", "utf8").trim().split(/\n/).map(JSON.parse);
+const fixtureCounts = Object.fromEntries(["NO_GO", "PLAN_ONLY", "RUN_WITH_CONTRACT"].map((decision) => [
+  decision,
+  fixtureInfo.filter((fixture) => fixture.category === decision).length,
+]));
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-install-"));
+const conflictDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-install-conflict-"));
+const symlinkDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-install-symlink-"));
+const symlinkOutsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-install-outside-"));
 const errors = [];
 
 const expectedInstalledFiles = [
@@ -56,9 +64,8 @@ function assertDoctorMetadata(report, label) {
   if (typeof metadata.timestamp !== "string" || Number.isNaN(Date.parse(metadata.timestamp))) {
     errors.push(`${label} metadata timestamp was not an ISO date`);
   }
-  const expectedFixtureCounts = { NO_GO: 15, PLAN_ONLY: 17, RUN_WITH_CONTRACT: 17 };
-  if (metadata.fixture?.total !== 49) errors.push(`${label} metadata fixture total mismatch`);
-  for (const [decision, expectedCount] of Object.entries(expectedFixtureCounts)) {
+  if (metadata.fixture?.total !== fixtureInfo.length) errors.push(`${label} metadata fixture total mismatch`);
+  for (const [decision, expectedCount] of Object.entries(fixtureCounts)) {
     if (metadata.fixture?.counts?.[decision] !== expectedCount) {
       errors.push(`${label} metadata fixture count mismatch for ${decision}`);
     }
@@ -109,6 +116,31 @@ else {
   ]) {
     if (!install.stdout.includes(expected)) errors.push(`install output missing ${expected}`);
   }
+}
+
+const lateConflict = path.join(conflictDir, ".claude", "commands", "should-loop.md");
+fs.mkdirSync(path.dirname(lateConflict), { recursive: true });
+fs.writeFileSync(lateConflict, "# existing project command\n", "utf8");
+const conflictedInstall = run(["install", "--cwd", conflictDir]);
+if (conflictedInstall.status === 0) errors.push("install with a late conflict unexpectedly succeeded");
+if (!`${conflictedInstall.stderr}${conflictedInstall.stdout}`.includes("already exists and differs")) {
+  errors.push("install with a late conflict returned the wrong error");
+}
+if (fs.existsSync(path.join(conflictDir, ".looppilot", "core", "qualification-rules.md"))) {
+  errors.push("install wrote earlier files before detecting a late conflict");
+}
+if (fs.readFileSync(lateConflict, "utf8") !== "# existing project command\n") {
+  errors.push("install changed the conflicting project file");
+}
+
+fs.symlinkSync(symlinkOutsideDir, path.join(symlinkDir, ".looppilot"), process.platform === "win32" ? "junction" : "dir");
+const symlinkInstall = run(["install", "--cwd", symlinkDir]);
+if (symlinkInstall.status === 0) errors.push("install through a symlinked pack directory unexpectedly succeeded");
+if (!`${symlinkInstall.stderr}${symlinkInstall.stdout}`.includes("symbolic link path component")) {
+  errors.push("install through a symlinked pack directory returned the wrong error");
+}
+if (fs.existsSync(path.join(symlinkOutsideDir, "core", "decision-schema.json"))) {
+  errors.push("install escaped the project through a symlinked pack directory");
 }
 
 const missingInstallDir = `${tempDir}-missing`;
@@ -167,7 +199,41 @@ else {
   }
 }
 
+const doctorOutsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-doctor-outside-"));
+fs.symlinkSync(doctorOutsideDir, path.join(tempDir, "linked-reports"), process.platform === "win32" ? "junction" : "dir");
+const linkedDoctorOutput = run(["doctor", "--target", "both", "--cwd", tempDir, "--json", "--output", "linked-reports/doctor.json"]);
+if (linkedDoctorOutput.status === 0) errors.push("doctor output through a symlinked directory unexpectedly succeeded");
+if (!`${linkedDoctorOutput.stderr}${linkedDoctorOutput.stdout}`.includes("symbolic link path component")) {
+  errors.push("doctor symlink output returned the wrong error");
+}
+if (fs.existsSync(path.join(doctorOutsideDir, "doctor.json"))) errors.push("doctor output escaped the project through a symlink");
+
+const protectedSchemaPath = path.join(tempDir, ".looppilot", "core", "decision-schema.json");
+const protectedSchemaBefore = fs.readFileSync(protectedSchemaPath, "utf8");
+const protectedDoctorOutput = run(["doctor", "--target", "both", "--cwd", tempDir, "--json", "--output", ".looppilot/core/decision-schema.json", "--force"]);
+if (protectedDoctorOutput.status === 0) errors.push("doctor unexpectedly overwrote an Agent Pack schema file");
+if (!`${protectedDoctorOutput.stderr}${protectedDoctorOutput.stdout}`.includes("refuses to overwrite Agent Pack file")) {
+  errors.push("doctor protected output returned the wrong error");
+}
+if (fs.readFileSync(protectedSchemaPath, "utf8") !== protectedSchemaBefore) errors.push("doctor changed a protected Agent Pack file");
+fs.rmSync(doctorOutsideDir, { recursive: true, force: true });
+
+const staleWrapper = path.join(tempDir, ".agents", "skills", "looppilot", "SKILL.md");
+fs.appendFileSync(staleWrapper, "\n<!-- stale local copy -->\n", "utf8");
+const staleDoctor = run(["doctor", "--target", "both", "--cwd", tempDir, "--json"]);
+if (staleDoctor.status === 0) errors.push("doctor unexpectedly accepted a stale installed pack file");
+if (!`${staleDoctor.stderr}${staleDoctor.stdout}`.includes("differs from package source")) {
+  errors.push("doctor stale-pack failure did not explain how to refresh the Agent Pack");
+}
+const refreshInstall = run(["install", "--target", "both", "--cwd", tempDir, "--force"]);
+if (refreshInstall.status !== 0) errors.push(`install --force failed to refresh a stale pack: ${refreshInstall.stderr || refreshInstall.stdout}`);
+const refreshedDoctor = run(["doctor", "--target", "both", "--cwd", tempDir, "--json"]);
+if (refreshedDoctor.status !== 0) errors.push(`doctor failed after refreshing a stale pack: ${refreshedDoctor.stderr || refreshedDoctor.stdout}`);
+
 fs.rmSync(tempDir, { recursive: true, force: true });
+fs.rmSync(conflictDir, { recursive: true, force: true });
+fs.rmSync(symlinkDir, { recursive: true, force: true });
+fs.rmSync(symlinkOutsideDir, { recursive: true, force: true });
 
 if (errors.length > 0) {
   console.error("LoopPilot install command validation failed:");

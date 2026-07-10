@@ -4,6 +4,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { parseIssueIntakeArgs } from "../.looppilot/scripts/issue-intake.mjs";
 
 const cli = path.resolve("scripts/looppilot.mjs");
 const errors = [];
@@ -15,9 +16,9 @@ function issue(overrides = {}) {
   return {
     html_url: "https://github.com/acme/widgets/issues/123",
     state: "open",
-    title: "Fix widget retry bug\n## injected ghp_TITLESECRETSECRETSECRETSECRETSECRET",
+    title: "Fix <img src=x onerror=alert(1)> widget retry bug\n## injected ghp_TITLESECRETSECRETSECRETSECRETSECRET",
     body: "Retry fails. See comments for repro. Related to #456. ```` github_pat_SECRETSECRETSECRETSECRETSECRET",
-    labels: [{ name: "bug\n- injected" }, "npm_LABELSECRETSECRETSECRETSECRET"],
+    labels: [{ name: "bug\n- injected" }, "[unsafe](javascript:alert(1))", "npm_LABELSECRETSECRETSECRETSECRET"],
     user: { login: "octocat" },
     created_at: "2026-06-01T00:00:00Z",
     updated_at: "2026-06-02T00:00:00Z",
@@ -84,6 +85,13 @@ function assert(condition, message) {
   if (!condition) errors.push(message);
 }
 
+try {
+  parseIssueIntakeArgs(["--repo", "acme/widgets", "--repo", "other/repo", "--number", "1"]);
+  errors.push("direct issue-intake parser accepted a duplicate --repo option");
+} catch (error) {
+  assert(error.message.includes("Duplicate option: --repo."), `direct duplicate option returned the wrong error: ${error.message}`);
+}
+
 function assertNoHeavyEndpoints(requestLog, label) {
   for (const request of requestLog) {
     if (/\/(comments|timeline|pulls|attachments|logs)(\/|$)/.test(request.url)) {
@@ -117,6 +125,8 @@ await withServer({
   assert(!result.stdout.includes("npm_LABEL"), "markdown output leaked label token-like value");
   assert(!result.stdout.includes("\n## injected"), "markdown output allowed title to inject heading structure");
   assert(!result.stdout.includes("\n- injected"), "markdown output allowed label to inject list structure");
+  assert(!result.stdout.includes("<img"), "markdown output allowed raw HTML from an issue title");
+  assert(!result.stdout.includes("[unsafe](javascript:"), "markdown output allowed a label to inject a Markdown link");
   assert(result.stdout.includes("`````text"), "markdown output did not choose a safe dynamic code fence");
   assert(requestLog.length === 1, `markdown success expected 1 request, saw ${requestLog.length}`);
   assert(requestLog[0]?.url === "/repos/acme/widgets/issues/123", `markdown success called ${requestLog[0]?.url}`);
@@ -151,6 +161,7 @@ await withServer({
   assert(!parsed.source.title.includes("\n"), "json title was not normalized to one line");
   assert(!parsed.source.labels.some((label) => label.includes("\n")), "json labels were not normalized to one line");
   assert(!parsed.source.url.includes("\n"), "json URL was not normalized to one line");
+  assert(parsed.source.url === "https://github.com/acme/widgets/issues/123", "json URL should be canonical and independent of response text");
   assert(!parsed.source.created_at.includes("\n"), "json created_at was not normalized to one line");
   assert(parsed.source.comments_count === 0, "json comments_count should be normalized to a non-negative integer");
   assert(parsed.context.status === "issue_only", "json should be issue_only when no warnings");
@@ -264,7 +275,44 @@ for (const [status, expected] of [
 await withServer({
   "/repos/acme/widgets/issues/123": [200, issue({ body: "first" })],
   "/repos/acme/widgets/issues/124": [200, issue({ html_url: "https://github.com/acme/widgets/issues/124", body: "second" })],
-}, async (baseUrl) => {
+}, async (baseUrl, requestLog) => {
+  const issueOutsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-issue-output-outside-"));
+  fs.symlinkSync(issueOutsideDir, path.join(tmpRoot, "linked-output"), process.platform === "win32" ? "junction" : "dir");
+  const requestsBeforeUnsafeOutputs = requestLog.length;
+  const linkedOutput = await run([
+    "issue-intake", "--repo", "acme/widgets", "--number", "123", "--cwd", tmpRoot, "--output", "linked-output/intake.md",
+  ], baseUrl);
+  assert(linkedOutput.status !== 0, "issue-intake output through a symlinked directory should fail");
+  assert(linkedOutput.stderr.includes("symbolic link path component"), "issue-intake symlink output returned the wrong error");
+  assert(!fs.existsSync(path.join(issueOutsideDir, "intake.md")), "issue-intake output escaped the project through a symlink");
+
+  fs.symlinkSync(issueOutsideDir, path.join(tmpRoot, "..linked-issue"), process.platform === "win32" ? "junction" : "dir");
+  const dotdotLinkedOutput = await run([
+    "issue-intake", "--repo", "acme/widgets", "--number", "123", "--cwd", tmpRoot, "--output", "..linked-issue/intake.md",
+  ], baseUrl);
+  assert(dotdotLinkedOutput.status !== 0, "issue-intake '..' prefix symlink output should fail");
+  assert(dotdotLinkedOutput.stderr.includes("symbolic link path component"), "issue-intake '..' prefix symlink returned the wrong error");
+
+  const protectedOutput = await run([
+    "issue-intake", "--repo", "acme/widgets", "--number", "123", "--cwd", tmpRoot, "--output", ".looppilot/core/intake.md",
+  ], baseUrl);
+  assert(protectedOutput.status !== 0, "issue-intake should reject Agent Pack output paths");
+  assert(protectedOutput.stderr.includes("refuses to overwrite Agent Pack file"), "issue-intake protected output returned the wrong error");
+
+  const dependencyOutput = await run([
+    "issue-intake", "--repo", "acme/widgets", "--number", "123", "--cwd", tmpRoot, "--output", "package-lock.json",
+  ], baseUrl);
+  assert(dependencyOutput.status !== 0, "issue-intake should reject dependency metadata outputs");
+  assert(dependencyOutput.stderr.includes("refuses to overwrite dependency metadata"), "issue-intake dependency output returned the wrong error");
+
+  const sensitiveOutput = await run([
+    "issue-intake", "--repo", "acme/widgets", "--number", "123", "--cwd", tmpRoot, "--output", ".env.intake",
+  ], baseUrl);
+  assert(sensitiveOutput.status !== 0, "issue-intake should reject sensitive output paths");
+  assert(sensitiveOutput.stderr.includes("refuses to write a sensitive path"), "issue-intake sensitive output returned the wrong error");
+  assert(requestLog.length === requestsBeforeUnsafeOutputs, "unsafe issue-intake outputs should fail before network access");
+  fs.rmSync(issueOutsideDir, { recursive: true, force: true });
+
   const outputPath = path.join(tmpRoot, "intake.md");
   const first = await run(["issue-intake", "--repo", "acme/widgets", "--number", "123", "--output", outputPath], baseUrl);
   assert(first.status === 0, `output write failed: ${first.stderr || first.stdout}`);
@@ -287,8 +335,16 @@ await withServer({
 for (const [args, expected] of [
   [["issue-intake", "--url", "https://github.com/acme/widgets/pull/12"], "issue-intake accepts GitHub issues, not pull requests"],
   [["issue-intake", "--url", "https://example.com/acme/widgets/issues/12"], "must use github.com"],
+  [["issue-intake", "--url", "http://github.com/acme/widgets/issues/12"], "must use https"],
+  [["issue-intake", "--url", "ftp://github.com/acme/widgets/issues/12"], "must use https"],
+  [["issue-intake", "--url", "https://user:pass@github.com/acme/widgets/issues/12"], "must not contain credentials"],
+  [["issue-intake", "--url", "https://github.com:444/acme/widgets/issues/12"], "must not use a non-standard port"],
   [["issue-intake", "--repo", "bad", "--number", "12"], "must look like owner/name"],
   [["issue-intake", "--repo", "acme/widgets", "--number", "abc"], "must be a positive integer"],
+  [["issue-intake", "--repo", "acme/widgets", "--number", "0"], "must be a positive integer"],
+  [["issue-intake", "--repo", "acme/widgets", "--number", "012"], "must be a positive integer"],
+  [["issue-intake", "--repo", "acme/widgets", "--number", "9007199254740992"], "exceeds the safe integer range"],
+  [["issue-intake", "--url", "https://github.com/acme/widgets/issues/12/extra"], "must look like"],
 ]) {
   const result = await run(args, "http://127.0.0.1:1");
   assert(result.status !== 0, `${args.join(" ")} should fail`);

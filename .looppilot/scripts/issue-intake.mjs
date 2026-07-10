@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from "node:fs";
+import crypto from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 import path from "node:path";
@@ -55,6 +56,119 @@ function assertDirectoryExists(directory, label) {
   }
 }
 
+function isProtectedPackPath(relativePath) {
+  const normalized = relativePath.split(path.sep).join("/").toLowerCase();
+  return normalized.startsWith(".looppilot/core/")
+    || normalized.startsWith(".looppilot/fixtures/")
+    || normalized.startsWith(".looppilot/scripts/")
+    || normalized.startsWith(".agents/skills/looppilot/")
+    || normalized.startsWith(".claude/skills/looppilot/")
+    || normalized === ".claude/commands/should-loop.md";
+}
+
+function isInsideProject(targetRoot, candidatePath) {
+  const relative = path.relative(targetRoot, candidatePath);
+  return relative === "" || (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`));
+}
+
+function isDependencyMetadataPath(relativePath) {
+  const basename = relativePath.split(path.sep).pop()?.toLowerCase() ?? "";
+  return new Set([
+    "package.json", "package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml",
+    "yarn.lock", "bun.lock", "bun.lockb", "deno.lock",
+  ]).has(basename);
+}
+
+function isSensitivePath(candidatePath) {
+  const normalized = candidatePath.split(path.sep).join("/").toLowerCase();
+  const segments = normalized.split("/").filter(Boolean);
+  const basename = segments.at(-1) ?? "";
+  return /^\.env(?:\..*)?$/.test(basename)
+    || [".npmrc", ".pypirc", ".netrc"].includes(basename)
+    || /\.(?:pem|key)$/.test(basename)
+    || segments.some((segment) => ["secrets", ".ssh", ".aws"].includes(segment))
+    || normalized.endsWith("/.docker/config.json")
+    || normalized.endsWith("/.config/gh/hosts.yml");
+}
+
+function assertSafeOutputDestination(targetRoot, outputPath) {
+  const relative = path.relative(targetRoot, outputPath);
+  const insideProject = isInsideProject(targetRoot, outputPath);
+  if (insideProject) {
+    let current = targetRoot;
+    const parts = relative.split(path.sep).filter(Boolean);
+    for (let index = 0; index < parts.length; index += 1) {
+      const part = parts[index];
+      current = path.join(current, part);
+      try {
+        const stat = fs.lstatSync(current);
+        if (stat.isSymbolicLink()) {
+          throw new Error(`issue-intake output uses symbolic link path component ${path.relative(targetRoot, current)}.`);
+        }
+        if (index < parts.length - 1 && !stat.isDirectory()) {
+          throw new Error(`issue-intake output parent is not a directory: ${path.relative(targetRoot, current)}.`);
+        }
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+    }
+    if (isProtectedPackPath(relative)) {
+      throw new Error(`issue-intake refuses to overwrite Agent Pack file ${relative}.`);
+    }
+  }
+  if (isDependencyMetadataPath(outputPath)) {
+    throw new Error(`issue-intake refuses to overwrite dependency metadata ${outputPath}.`);
+  }
+  if (isSensitivePath(outputPath)) {
+    throw new Error(`issue-intake refuses to write a sensitive path ${outputPath}.`);
+  }
+  try {
+    const stat = fs.lstatSync(outputPath);
+    if (stat.isSymbolicLink() || !stat.isFile()) {
+      throw new Error(`issue-intake output must be a regular file, not a symbolic link or directory: ${outputPath}`);
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
+
+function writeTextAtomically(outputPath, content) {
+  const temporaryPath = path.join(
+    path.dirname(outputPath),
+    `.${path.basename(outputPath)}.looppilot-${process.pid}-${crypto.randomUUID()}.tmp`,
+  );
+  let displacedPath = null;
+  let replacementSucceeded = false;
+  try {
+    fs.writeFileSync(temporaryPath, content, "utf8");
+    try {
+      fs.renameSync(temporaryPath, outputPath);
+    } catch (error) {
+      if (!fs.existsSync(outputPath) || !["EEXIST", "EPERM"].includes(error.code)) throw error;
+      displacedPath = path.join(
+        path.dirname(outputPath),
+        `.${path.basename(outputPath)}.looppilot-${process.pid}-${crypto.randomUUID()}.old`,
+      );
+      fs.renameSync(outputPath, displacedPath);
+      try {
+        fs.renameSync(temporaryPath, outputPath);
+        replacementSucceeded = true;
+      } catch (replacementError) {
+        try {
+          fs.renameSync(displacedPath, outputPath);
+          displacedPath = null;
+        } catch (restoreError) {
+          throw new Error(`Replacement failed and the original file was preserved at ${displacedPath}: ${restoreError.message}`, { cause: replacementError });
+        }
+        throw replacementError;
+      }
+    }
+  } finally {
+    fs.rmSync(temporaryPath, { force: true });
+    if (replacementSucceeded && displacedPath) fs.rmSync(displacedPath, { force: true });
+  }
+}
+
 function readOptionValue(name, argv, index) {
   const value = argv[index + 1];
   if (!value || value.startsWith("--")) {
@@ -64,6 +178,7 @@ function readOptionValue(name, argv, index) {
 }
 
 export function parseIssueIntakeArgs(argv) {
+  const seenOptions = new Set();
   const options = {
     cwd: process.cwd(),
     output: null,
@@ -75,23 +190,36 @@ export function parseIssueIntakeArgs(argv) {
     dryRun: false,
   };
 
+  function recordOption(name) {
+    if (seenOptions.has(name)) throw new Error(`Duplicate option: ${name}.`);
+    seenOptions.add(name);
+  }
+
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--cwd") {
+      recordOption(arg);
       options.cwd = readOptionValue(arg, argv, index++);
     } else if (arg === "--output") {
+      recordOption(arg);
       options.output = readOptionValue(arg, argv, index++);
     } else if (arg === "--repo") {
+      recordOption(arg);
       options.repo = readOptionValue(arg, argv, index++);
     } else if (arg === "--number") {
+      recordOption(arg);
       options.number = readOptionValue(arg, argv, index++);
     } else if (arg === "--url") {
+      recordOption(arg);
       options.url = readOptionValue(arg, argv, index++);
     } else if (arg === "--json") {
+      recordOption(arg);
       options.json = true;
     } else if (arg === "--force") {
+      recordOption(arg);
       options.force = true;
     } else if (arg === "--dry-run") {
+      recordOption(arg);
       options.dryRun = true;
     } else if (arg === "--help" || arg === "-h" || arg === "help") {
       options.help = true;
@@ -121,6 +249,15 @@ function parseIssueUrl(rawUrl) {
   }
 
   const host = parsed.hostname.toLowerCase();
+  if (parsed.protocol !== "https:") {
+    throw new Error("issue-intake --url must use https.");
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error("issue-intake --url must not contain credentials.");
+  }
+  if (parsed.port && parsed.port !== "443") {
+    throw new Error("issue-intake --url must not use a non-standard port.");
+  }
   if (host !== "github.com" && host !== "www.github.com") {
     throw new Error("issue-intake --url must use github.com.");
   }
@@ -129,7 +266,7 @@ function parseIssueUrl(rawUrl) {
   if (parts.length >= 4 && parts[2] === "pull") {
     throw new Error("issue-intake accepts GitHub issues, not pull requests.");
   }
-  if (parts.length < 4 || parts[2] !== "issues") {
+  if (parts.length !== 4 || parts[2] !== "issues") {
     throw new Error("issue-intake --url must look like https://github.com/owner/repo/issues/123.");
   }
 
@@ -144,14 +281,18 @@ function normalizeIssueRef(repo, number) {
   if (repoParts.length !== 2 || repoParts.some((part) => !/^[A-Za-z0-9_.-]+$/.test(part))) {
     throw new Error("issue-intake --repo must look like owner/name.");
   }
-  if (!number || !/^[0-9]+$/.test(String(number))) {
+  if (!number || !/^[1-9][0-9]*$/.test(String(number))) {
     throw new Error("issue-intake --number must be a positive integer.");
+  }
+  const normalizedNumber = Number(number);
+  if (!Number.isSafeInteger(normalizedNumber)) {
+    throw new Error("issue-intake --number exceeds the safe integer range.");
   }
   return {
     owner: repoParts[0],
     repo: repoParts[1],
     repoFullName: `${repoParts[0]}/${repoParts[1]}`,
-    number: Number(number),
+    number: normalizedNumber,
     urlReferencesComment: false,
   };
 }
@@ -366,7 +507,7 @@ function buildIssueIntakePacket(issueRef, issue) {
     source: {
       repo: issueRef.repoFullName,
       number: issueRef.number,
-      url: redactSingleLine(issue.html_url || fallbackUrl) || fallbackUrl,
+      url: fallbackUrl,
       state: redactSingleLine(issue.state || "unknown") || "unknown",
       title: redactedTitle,
       labels: labelsFromIssue(issue),
@@ -397,6 +538,14 @@ function markdownList(items) {
   return items.map((item) => `- ${item}`).join("\n");
 }
 
+function escapeMarkdownInline(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replace(/([\\`*_\[\]])/g, "\\$1");
+}
+
 function markdownFenceFor(text) {
   const longestRun = [...text.matchAll(/`+/g)].reduce((max, match) => Math.max(max, match[0].length), 3);
   return "`".repeat(longestRun + 1);
@@ -408,15 +557,15 @@ function renderIssueIntakeMarkdown(packet) {
 
 ## Source
 
-- Repo: ${packet.source.repo}
+- Repo: ${escapeMarkdownInline(packet.source.repo)}
 - Issue: #${packet.source.number}
 - URL: ${packet.source.url}
-- State: ${packet.source.state}
-- Title: ${packet.source.title}
-- Labels: ${packet.source.labels.join(", ") || "none"}
-- Author: ${packet.source.author}
-- Created: ${packet.source.created_at ?? "unknown"}
-- Updated: ${packet.source.updated_at ?? "unknown"}
+- State: ${escapeMarkdownInline(packet.source.state)}
+- Title: ${escapeMarkdownInline(packet.source.title)}
+- Labels: ${packet.source.labels.map(escapeMarkdownInline).join(", ") || "none"}
+- Author: ${escapeMarkdownInline(packet.source.author)}
+- Created: ${escapeMarkdownInline(packet.source.created_at ?? "unknown")}
+- Updated: ${escapeMarkdownInline(packet.source.updated_at ?? "unknown")}
 - Comments count: ${packet.source.comments_count}
 
 ## Context Completeness
@@ -456,6 +605,13 @@ export async function runIssueIntake(options) {
 
   const targetRoot = path.resolve(options.cwd ?? process.cwd());
   assertDirectoryExists(targetRoot, "Project");
+  const outputPath = options.output ? path.resolve(targetRoot, options.output) : null;
+  if (outputPath) {
+    assertSafeOutputDestination(targetRoot, outputPath);
+    if (fs.existsSync(outputPath) && !options.force) {
+      throw new Error(`${path.relative(targetRoot, outputPath)} already exists. Re-run with --force to overwrite.`);
+    }
+  }
   const issueRef = issueRefFromOptions(options);
   const issue = await fetchGitHubIssue(issueRef);
   const packet = buildIssueIntakePacket(issueRef, issue);
@@ -463,14 +619,10 @@ export async function runIssueIntake(options) {
     ? `${JSON.stringify(packet, null, 2)}\n`
     : renderIssueIntakeMarkdown(packet);
 
-  if (options.output) {
-    const outputPath = path.resolve(targetRoot, options.output);
-    if (fs.existsSync(outputPath) && !options.force) {
-      throw new Error(`${path.relative(targetRoot, outputPath)} already exists. Re-run with --force to overwrite.`);
-    }
+  if (outputPath) {
     if (!options.dryRun) {
       fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-      fs.writeFileSync(outputPath, output, "utf8");
+      writeTextAtomically(outputPath, output);
     }
     console.log(`LoopPilot issue-intake ${options.dryRun ? "would write" : "written"}.`);
     console.log(`Output: ${path.relative(targetRoot, outputPath)}`);

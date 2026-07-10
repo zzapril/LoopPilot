@@ -3,11 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { validateJsonSchema } from "./lib/schema-validator.mjs";
+import { validateHostCapabilities } from "./lib/decision-validator.mjs";
 
 const helper = path.resolve(".looppilot/scripts/host-capability-summary.mjs");
-const schema = JSON.parse(fs.readFileSync(path.resolve(".looppilot/core/decision-schema.json"), "utf8"));
-const hostCapabilitiesSchema = schema.$defs.hostCapabilities;
 const errors = [];
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "looppilot-host-capability-"));
 const expectedCwd = fs.realpathSync(tempDir);
@@ -36,13 +34,16 @@ else {
     const summary = JSON.parse(result.stdout);
     if (!summary || typeof summary !== "object" || Array.isArray(summary)) errors.push("summary must be an object");
     if (!summary.host_capabilities) errors.push("summary.host_capabilities is required");
-    else errors.push(...validateJsonSchema(summary.host_capabilities, hostCapabilitiesSchema, "host_capabilities"));
+    else errors.push(...validateHostCapabilities(summary.host_capabilities, "host_capabilities"));
     if (summary.host_capabilities?.host !== "codex") errors.push("summary did not detect codex host from sandbox evidence");
     if (summary.host_capabilities?.capability_confidence !== "unknown") {
       errors.push("summary should keep capability confidence unknown when edit/approval capabilities are only advisory");
     }
     if (summary.host_capabilities?.supports_skills_or_commands !== true) {
       errors.push("summary did not derive skills/commands support from known host evidence");
+    }
+    if (JSON.stringify(summary.host_capabilities?.supported_surfaces) !== JSON.stringify(["goal"])) {
+      errors.push("summary did not report the conservative Codex surface profile");
     }
     if (summary.evidence?.cwd !== expectedCwd) errors.push("summary did not report current working directory evidence");
     if (summary.evidence?.git_available === undefined) errors.push("summary did not report git availability evidence");

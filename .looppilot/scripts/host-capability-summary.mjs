@@ -17,6 +17,7 @@ function commandAvailable(command, args = ["--version"]) {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
+    timeout: 5000,
   });
   return result.status === 0;
 }
@@ -51,6 +52,7 @@ const gitAvailable = commandAvailable("git");
 const packageScripts = readPackageScriptNames();
 const sandboxEnv = safeSandboxEnv();
 const host = detectHost(sandboxEnv);
+const supportedSurfaces = host === "claude_code" ? ["goal", "loop"] : host === "codex" ? ["goal"] : [];
 
 const summary = {
   host_capabilities: {
@@ -59,6 +61,7 @@ const summary = {
     can_run_commands: true,
     has_approval_flow: false,
     supports_skills_or_commands: host !== "unknown",
+    supported_surfaces: supportedSurfaces,
     capability_confidence: "unknown",
   },
   evidence: {

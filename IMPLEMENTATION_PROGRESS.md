@@ -1,10 +1,10 @@
 # LoopPilot Implementation Progress
 
-Last updated: 2026-07-09
+Last updated: 2026-07-10
 
 ## Feature Progress
 
-- [x] Shared core protocol: qualification rules, decision schema, contract template, and 49 decision fixtures.
+- [x] Shared core protocol: qualification rules, decision schema v2, contract template, and 52 decision fixtures.
 - [x] Fixture validator and verification scripts.
 - [x] Codex and Claude Code wrappers.
 - [x] Install and enhanced doctor commands with per-check pass/fail output.
@@ -24,7 +24,12 @@ Last updated: 2026-07-09
 - [x] `0.2.2` documentation hotfix: npm package README and Quickstart point to the current published install version.
 - [x] `0.2.3` release: frozen dependency setup guardrails and refreshed public README positioning.
 - [x] `0.2.4` security fix: issue-intake only sends GitHub tokens to the official GitHub API and rejects non-loopback custom API base URLs.
-- [x] `0.3.0` release candidate: Claude Code `/loop`-aware recommendations and the `recommended_surface` decision field.
+- [x] `0.3.0` release: Claude Code `/loop`-aware recommendations and the `recommended_surface` decision field.
+- [x] `0.4.0` release candidate: executable surface contracts, host capability gating, dependency action split, reliable scan/install behavior, and standalone schema validation.
+- [x] `0.4.0` hardening pass: exact schema fingerprints, command-gate semantics, action-aligned confirmations, symlink-safe transactional install, stale-pack doctor checks, exact scan bounds, and full golden-output validation.
+- [x] `0.4.0` third-pass hardening: decision-state invariants, whitespace rejection, richer risk-path detection, strict duplicate options and issue URLs, escaped issue Markdown, bounded evidence commands, and parity dataset integrity.
+- [x] `0.4.0` fourth-pass hardening: safe command gates, consistent NO_GO state, project-wide output symlink protection, Agent Pack destination protection, atomic explicit writes, and pre-network issue output validation.
+- [x] `0.4.0` fifth-pass hardening: correct `..name` containment, case-insensitive protected paths, dependency/lockfile output protection, sensitive source/output/gate blocking, and failure-safe displaced-original preservation.
 - [x] Claude Code `/loop`-aware recommendations: decision JSON now includes `recommended_surface` for `manual`, `plan`, `goal`, `loop`, and `routine`.
 
 ## v1 Manual Artifact Progress
