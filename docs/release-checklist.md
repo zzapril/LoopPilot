@@ -2,13 +2,13 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.3.0` is the latest published release line. `0.3.0` was published to npm on `2026-07-09T15:52:06.162Z`.
+Current status: `0.4.0` is the latest published release line. `0.4.0` was published to npm on `2026-07-10T15:14:46.851Z`.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
-- Shasum: `6574c30221bec3141779f40508d1981b05388868`
+- Shasum: `9b3ebfd33f2b80017c2d6c5c71cd597282414c14`
 
-Current repository status: `0.4.0` is a release candidate built on the published `0.3.0` line. It adds executable surface contracts, explicit dependency-setup approval, atomic installation, reliable scan state, and generated standalone schema validation. It has not been published.
+Current repository status: `0.4.0` is published. It adds executable surface contracts, explicit dependency-setup approval, atomic installation, reliable scan state, generated standalone schema validation, and five rounds of safety hardening.
 
 ## Package Readiness
 
@@ -186,9 +186,11 @@ After verification:
 - [x] Record the published timestamp and shasum after npm publish succeeds.
 - [x] Confirm `npx @looppilot/cli@0.3.0 --help`, `install`, and `doctor --json` work from a clean temporary directory.
 
-## 0.4.0 Release Candidate
+## 0.4.0 Publish Record
 
-- Status: prepared locally; npm publish, registry verification, push, and release-record finalization remain pending.
+- Published: `2026-07-10T15:14:46.851Z`
+- Shasum: `9b3ebfd33f2b80017c2d6c5c71cd597282414c14`
+- Status: published to npm with the `latest` dist tag; registry verification and clean-directory package smoke tests passed.
 - Focus: make surface recommendations enforceable and close the installer, scan, intake, dependency, schema-runtime, and Node support gaps found in the post-`0.3.0` review.
 - [x] Require `host_capabilities.supported_surfaces` and a matching `surface_config` for executable contracts.
 - [x] Keep external `loop` and `routine` sources read-only and capability-gated.
@@ -214,5 +216,5 @@ After verification:
 - [x] Reject sensitive file references in command gates, including absolute and option-assignment forms.
 - [x] Set Node support to `>=22` and CI coverage to Node 22, 24, and 26.
 - [x] Run the complete local release validation section on the final candidate.
-- [ ] Publish `@looppilot/cli@0.4.0` only after explicit release approval and credentials are available.
-- [ ] Record npm timestamp and shasum, then run published `npx` install/doctor smoke tests.
+- [x] Publish `@looppilot/cli@0.4.0` only after explicit release approval and credentials are available.
+- [x] Record npm timestamp and shasum, then run published `npx` install/doctor smoke tests.

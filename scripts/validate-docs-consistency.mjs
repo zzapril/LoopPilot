@@ -51,8 +51,7 @@ const requiredFragmentsByFile = {
   "README.md": [
     "@looppilot/cli",
     "0.4.0",
-    "0.3.0",
-    "npx @looppilot/cli@0.3.0 install",
+    "npx @looppilot/cli@0.4.0 install",
     "/should-loop <task-or-issue-url>",
     "Use LoopPilot on <task-or-issue-url>",
     "Where LoopPilot fits with Claude Code `/loop`",
@@ -119,8 +118,7 @@ const requiredFragmentsByFile = {
   ],
   "docs/LoopPilot_Quickstart.md": [
     "0.4.0",
-    "0.3.0",
-    "npx @looppilot/cli@0.3.0 install",
+    "npx @looppilot/cli@0.4.0 install",
     "/should-loop <task-or-issue-url>",
     "Use LoopPilot on <task-or-issue-url>",
     "Claude Code `/loop`",
@@ -153,6 +151,7 @@ const requiredFragmentsByFile = {
     ".looppilot/scripts/issue-intake.mjs",
     "https://www.npmjs.com/package/@looppilot/cli",
     "611c591fa361bf9a1bb4209fd028b8e842eb017a",
+    "9b3ebfd33f2b80017c2d6c5c71cd597282414c14",
     ".looppilot/VISION.md",
     ".looppilot/STATE.md",
     ".looppilot/RUN_LOG.md",
@@ -223,7 +222,8 @@ const requiredFragmentsByFile = {
   ],
   "docs/release-notes-0.4.0.md": [
     "@looppilot/cli@0.4.0",
-    "release candidate",
+    "Published:",
+    "9b3ebfd33f2b80017c2d6c5c71cd597282414c14",
     "supported_surfaces",
     "surface_config",
     "dependency_setup",

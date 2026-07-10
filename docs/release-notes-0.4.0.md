@@ -1,6 +1,10 @@
-# LoopPilot 0.4.0 Release Candidate
+# LoopPilot 0.4.0 Release Notes
 
-Status: release candidate prepared locally. `@looppilot/cli@0.4.0` is not published; the latest published npm version remains `0.3.0`.
+Published: `2026-07-10T15:14:46.851Z`
+
+- Package: `@looppilot/cli@0.4.0`
+- Dist tag: `latest`
+- Shasum: `9b3ebfd33f2b80017c2d6c5c71cd597282414c14`
 
 ## What changes
 
@@ -41,6 +45,6 @@ Decision and contract producers must make these direct replacements:
 
 These enum changes intentionally have no backward-compatibility alias. Existing `0.3.0` JSON must be regenerated or migrated before validating against schema v2.
 
-## Release boundary
+## Verification
 
-No npm publish, git push, deployment, or release creation is part of this candidate preparation. Complete `docs/release-checklist.md`, obtain explicit release approval, then publish and record the registry timestamp and shasum.
+The published package passed `npx` help, project install for both agent targets, and `doctor --json` from a clean temporary directory. Doctor reported package version `0.4.0`, 19 installed files, and complete pack integrity.

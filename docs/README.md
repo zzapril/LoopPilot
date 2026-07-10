@@ -6,7 +6,7 @@ This directory contains product, technical, release, and future-planning notes. 
 2. `LoopPilot_PRD_v0.2.md` - product scope and non-goals.
 3. `LoopPilot_Technical_Design_v0.2.md` - implementation shape and safety boundaries.
 4. `LoopPilot_Reusable_Artifacts_v1.md` - optional manual artifacts: `VISION.md`, `STATE.md`, `RUN_LOG.md`, and review-gate evidence.
-5. `release-checklist.md` and `release-notes-*.md` - published release records plus the `0.4.0` release-candidate migration notes.
+5. `release-checklist.md` and `release-notes-*.md` - published release records plus the `0.4.0` migration notes.
 6. `LoopPilot_Implementation_Status_and_Plan_v0.2.md` - audit log of what is implemented and verified.
 7. `launch-notes.md` - short external positioning copy for explaining LoopPilot as a stopping-boundary tool.
 
@@ -14,7 +14,7 @@ The v2 orchestration documents now authorize only the narrow agent-native single
 
 The `0.3.0` positioning layer is Claude Code `/loop` awareness: LoopPilot recommends whether a task should use `manual`, `plan`, `goal`, `loop`, or `routine`, while still leaving execution to the current agent surface.
 
-The `0.4.0` release candidate makes those recommendations executable contracts: hosts declare `supported_surfaces`, every contract supplies matching `surface_config`, external `loop`/`routine` inputs are read-only, and locked dependency setup requires explicit `dependency_setup` confirmation. It also hardens install preflight/rollback, scan status reporting, issue URL validation, and standalone schema validation. The latest published npm version remains `0.3.0` until the release checklist is completed.
+The published `0.4.0` release makes those recommendations executable contracts: hosts declare `supported_surfaces`, every contract supplies matching `surface_config`, external `loop`/`routine` inputs are read-only, and locked dependency setup requires explicit `dependency_setup` confirmation. It also hardens install preflight/rollback, scan status reporting, issue URL validation, and standalone schema validation.
 
 Current release-ready surface:
 
