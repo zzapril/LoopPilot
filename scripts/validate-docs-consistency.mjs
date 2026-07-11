@@ -52,8 +52,7 @@ const requiredFragmentsByFile = {
   "README.md": [
     "@looppilot/cli",
     "0.4.1",
-    "0.4.0",
-    "npx @looppilot/cli@0.4.0 install",
+    "npx @looppilot/cli@0.4.1 install",
     "/should-loop <task-or-issue-url>",
     "Use LoopPilot on <task-or-issue-url>",
     "Where LoopPilot fits with Claude Code `/loop`",
@@ -121,8 +120,7 @@ const requiredFragmentsByFile = {
   ],
   "docs/LoopPilot_Quickstart.md": [
     "0.4.1",
-    "0.4.0",
-    "npx @looppilot/cli@0.4.0 install",
+    "npx @looppilot/cli@0.4.1 install",
     "/should-loop <task-or-issue-url>",
     "Use LoopPilot on <task-or-issue-url>",
     "Claude Code `/loop`",
@@ -239,8 +237,9 @@ const requiredFragmentsByFile = {
     ">=22",
   ],
   "docs/release-notes-0.4.1.md": [
-    "@looppilot/cli@0.4.0",
-    "Release Candidate",
+    "@looppilot/cli@0.4.1",
+    "Published:",
+    "9e81bf7c9e1ffed27c2b4c0d4d8f448d6001f78d",
     "verifier allowlist",
     ".looppilot/scripts/file-safety.mjs",
     "trusted publishing",

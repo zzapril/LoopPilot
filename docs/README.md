@@ -6,7 +6,7 @@ This directory contains product, technical, release, and future-planning notes. 
 2. `LoopPilot_PRD_v0.2.md` - product scope and non-goals.
 3. `LoopPilot_Technical_Design_v0.2.md` - implementation shape and safety boundaries.
 4. `LoopPilot_Reusable_Artifacts_v1.md` - optional manual artifacts: `VISION.md`, `STATE.md`, `RUN_LOG.md`, and review-gate evidence.
-5. `release-checklist.md` and `release-notes-*.md` - published release records plus the `0.4.1` hardening candidate notes.
+5. `release-checklist.md` and `release-notes-*.md` - published release records plus the `0.4.1` hardening notes.
 6. `LoopPilot_Implementation_Status_and_Plan_v0.2.md` - audit log of what is implemented and verified.
 7. `launch-notes.md` - short external positioning copy for explaining LoopPilot as a stopping-boundary tool.
 
@@ -16,7 +16,7 @@ The `0.3.0` positioning layer is Claude Code `/loop` awareness: LoopPilot recomm
 
 The published `0.4.0` release makes those recommendations executable contracts: hosts declare `supported_surfaces`, every contract supplies matching `surface_config`, external `loop`/`routine` inputs are read-only, and locked dependency setup requires explicit `dependency_setup` confirmation. It also hardens install preflight/rollback, scan status reporting, issue URL validation, and standalone schema validation.
 
-The `0.4.1` release candidate replaces command-gate denial rules with a verifier allowlist, shares file-safety code across CLI and issue intake, trims development-only files from the npm package, and prepares token-free npm trusted publishing with tag/version/main consistency checks.
+The published `0.4.1` release replaces command-gate denial rules with a verifier allowlist, shares file-safety code across CLI and issue intake, trims development-only files from the npm package, and prepares token-free npm trusted publishing with tag/version/main consistency checks.
 
 Current release-ready surface:
 

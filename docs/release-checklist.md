@@ -2,13 +2,13 @@
 
 Use this checklist to audit published and release-ready `@looppilot/cli` versions.
 
-Current status: `0.4.0` is the latest published release line. `0.4.0` was published to npm on `2026-07-10T15:14:46.851Z`.
+Current status: `0.4.1` is the latest published release line. `0.4.1` was published to npm on `2026-07-11T04:30:54.462Z`.
 
 - npm URL: https://www.npmjs.com/package/@looppilot/cli
 - Dist tag: `latest`
-- Shasum: `9b3ebfd33f2b80017c2d6c5c71cd597282414c14`
+- Shasum: `9e81bf7c9e1ffed27c2b4c0d4d8f448d6001f78d`
 
-Current repository status: `0.4.1` is a release candidate built on published `0.4.0`. It adds verifier-only gates, shared file-safety helpers, package/runtime separation, and token-free release automation.
+Current repository status: `0.4.1` is published. It adds verifier-only gates, shared file-safety helpers, package/runtime separation, and token-free release automation.
 
 ## Package Readiness
 
@@ -222,9 +222,11 @@ After verification:
 - [x] Record npm timestamp and shasum, then run published `npx` install/doctor smoke tests.
 - [x] Fast-forward the release commit into `main` and confirm GitHub Actions run `29138991988` succeeds.
 
-## 0.4.1 Release Candidate
+## 0.4.1 Publish Record
 
-- Status: implementation in progress; not published.
+- Published: `2026-07-11T04:30:54.462Z`
+- Shasum: `9e81bf7c9e1ffed27c2b4c0d4d8f448d6001f78d`
+- Status: published to npm with the `latest` dist tag; main CI, registry verification, and clean-directory package smoke tests passed.
 - Focus: close arbitrary gate-command execution, remove duplicated file-safety logic, separate runtime from test code, reduce package contents, and move publishing to OIDC.
 - [x] Fast-forward published `0.4.0` into remote and local `main` without overwriting preserved local changes.
 - [x] Replace the gate-command denylist with a local verifier allowlist.
@@ -233,6 +235,7 @@ After verification:
 - [x] Separate runtime wrapper parity validation from eval mutation probes.
 - [x] Restrict npm package contents to runtime scripts and generated runtime validation.
 - [x] Pin CI actions, add CI timeouts, and add an OIDC publish workflow with tag/version/main validation.
-- [ ] Run the complete release validation suite and inspect the final package.
-- [ ] Configure npm trusted publishing before creating `v0.4.1`.
-- [ ] Merge to `main`, confirm CI, create `v0.4.1`, and verify the published package.
+- [x] Run the complete release validation suite and inspect the final package.
+- [ ] Configure npm trusted publishing for future token-free releases.
+- [x] Merge to `main`, confirm CI, publish `@looppilot/cli@0.4.1`, and verify the package.
+- [x] Record npm timestamp `2026-07-11T04:30:54.462Z` and shasum `9e81bf7c9e1ffed27c2b4c0d4d8f448d6001f78d`.

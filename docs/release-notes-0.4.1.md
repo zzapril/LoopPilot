@@ -1,6 +1,10 @@
-# LoopPilot 0.4.1 Release Candidate
+# LoopPilot 0.4.1 Release Notes
 
-Status: prepared for review. The latest published npm version remains `@looppilot/cli@0.4.0`.
+Published: `2026-07-11T04:30:54.462Z`
+
+- Package: `@looppilot/cli@0.4.1`
+- Dist tag: `latest`
+- Shasum: `9e81bf7c9e1ffed27c2b4c0d4d8f448d6001f78d`
 
 ## What changes
 
@@ -13,8 +17,10 @@ Status: prepared for review. The latest published npm version remains `@looppilo
 - A tag-triggered npm trusted-publishing workflow validates tag/package version equality and requires the tagged commit to be reachable from `main`.
 - Tag workflows detect an already-published immutable npm version and skip duplicate upload attempts after an approved manual fallback publish.
 
-## Release prerequisites
+## Verification
 
-- Merge the candidate into `main` and confirm the full CI matrix passes.
-- Configure npm trusted publishing for repository `zzapril/LoopPilot`, workflow `publish.yml`, environment `npm-publish`, and the `npm publish` action.
-- Create `v0.4.1` only from the reviewed `main` commit. The publish workflow rejects version or ancestry mismatches.
+- Main CI passed for the release source commit.
+- The published package passed `npx` help, project install for both agent targets, and `doctor --json` from a clean temporary directory.
+- Doctor reported package version `0.4.1`, 20 installed files, and complete pack integrity.
+- The published tarball contains 51 files, is about 113 kB compressed, and has no development-only validation entry points.
+- Future releases can use npm trusted publishing through `.github/workflows/publish.yml` after the registry trust relationship is configured.
