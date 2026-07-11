@@ -57,6 +57,8 @@ requireFragments(publishFile, publish, [
   "git merge-base --is-ancestor",
   "origin/main",
   "npm test",
+  "already_published",
+  "steps.registry.outputs.already_published != 'true'",
   "npm publish --access public",
 ]);
 for (const forbidden of ["NPM_TOKEN", "NODE_AUTH_TOKEN", "secrets."]) {
