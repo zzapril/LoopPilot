@@ -30,6 +30,7 @@ Last updated: 2026-07-10
 - [x] `0.4.0` third-pass hardening: decision-state invariants, whitespace rejection, richer risk-path detection, strict duplicate options and issue URLs, escaped issue Markdown, bounded evidence commands, and parity dataset integrity.
 - [x] `0.4.0` fourth-pass hardening: safe command gates, consistent NO_GO state, project-wide output symlink protection, Agent Pack destination protection, atomic explicit writes, and pre-network issue output validation.
 - [x] `0.4.0` fifth-pass hardening: correct `..name` containment, case-insensitive protected paths, dependency/lockfile output protection, sensitive source/output/gate blocking, and failure-safe displaced-original preservation.
+- [x] `0.4.1` hardening candidate: verifier-only command gates, shared file-safety helpers, runtime/test separation, reduced package contents, pinned CI actions, bounded CI jobs, and npm OIDC publishing preparation.
 - [x] Claude Code `/loop`-aware recommendations: decision JSON now includes `recommended_surface` for `manual`, `plan`, `goal`, `loop`, and `routine`.
 
 ## v1 Manual Artifact Progress

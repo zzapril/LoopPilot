@@ -1,6 +1,6 @@
 {
   "name": "@looppilot/cli",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": false,
   "type": "module",
   "engines": {
@@ -38,6 +38,7 @@
     "validate:issue-intake": "node scripts/validate-issue-intake.mjs",
     "host-capabilities": "node scripts/looppilot.mjs host-capabilities",
     "validate:host-capabilities": "node scripts/validate-host-capability-summary.mjs",
+    "validate:workflows": "node scripts/validate-workflows.mjs",
     "eval:wrapper-parity": "node scripts/eval-wrapper-parity.mjs",
     "prepublishOnly": "npm test"
   },
@@ -53,7 +54,9 @@
     ".looppilot/core/",
     ".looppilot/fixtures/",
     ".looppilot/scripts/",
-    "scripts/",
+    "scripts/looppilot.mjs",
+    "scripts/lib/",
+    "scripts/generated/",
     "docs/",
     "IMPLEMENTATION_PROGRESS.md",
     "README.md",

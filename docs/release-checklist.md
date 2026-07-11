@@ -8,13 +8,13 @@ Current status: `0.4.0` is the latest published release line. `0.4.0` was publis
 - Dist tag: `latest`
 - Shasum: `9b3ebfd33f2b80017c2d6c5c71cd597282414c14`
 
-Current repository status: `0.4.0` is published. It adds executable surface contracts, explicit dependency-setup approval, atomic installation, reliable scan state, generated standalone schema validation, and five rounds of safety hardening.
+Current repository status: `0.4.1` is a release candidate built on published `0.4.0`. It adds verifier-only gates, shared file-safety helpers, package/runtime separation, and token-free release automation.
 
 ## Package Readiness
 
 - [x] Confirm the package should be published publicly as `@looppilot/cli`.
 - [x] Confirm `package.json` has `"private": false`, `"license": "MIT"`, repository metadata, and public scoped-package publish config.
-- [x] Confirm `package.json` version is `0.4.0`.
+- [x] Confirm `package.json` version is `0.4.1`.
 - [x] Confirm the `files` whitelist contains only source, wrapper, core, fixture, script, docs, README, and license files needed by users.
 - [x] Confirm no secrets, credentials, local-only files, generated handoff exports, latest files, or generated v1 artifacts are intended for the package.
 - [x] Confirm the README install instructions match the package name and CLI behavior.
@@ -39,7 +39,9 @@ Current repository status: `0.4.0` is published. It adds executable surface cont
 
 ## npm Publish Playbook
 
-Use this flow for the next npm release. It records the `0.2.0` publishing lessons without storing any real token.
+Prefer `.github/workflows/publish.yml`, npm trusted publishing, and the protected `npm-publish` environment. Configure npm with repository `zzapril/LoopPilot`, workflow filename `publish.yml`, environment `npm-publish`, and permission for `npm publish`. The workflow uses OIDC, verifies that the tag equals `v<package version>`, and rejects tagged commits that are not reachable from `main`.
+
+The token flow below is an emergency fallback only. It records the `0.2.0` publishing lessons without storing any real token.
 
 Before publishing:
 
@@ -218,3 +220,19 @@ After verification:
 - [x] Run the complete local release validation section on the final candidate.
 - [x] Publish `@looppilot/cli@0.4.0` only after explicit release approval and credentials are available.
 - [x] Record npm timestamp and shasum, then run published `npx` install/doctor smoke tests.
+- [x] Fast-forward the release commit into `main` and confirm GitHub Actions run `29138991988` succeeds.
+
+## 0.4.1 Release Candidate
+
+- Status: implementation in progress; not published.
+- Focus: close arbitrary gate-command execution, remove duplicated file-safety logic, separate runtime from test code, reduce package contents, and move publishing to OIDC.
+- [x] Fast-forward published `0.4.0` into remote and local `main` without overwriting preserved local changes.
+- [x] Replace the gate-command denylist with a local verifier allowlist.
+- [x] Reject package executors, arbitrary scripts, containers, cloud CLIs, and external-state commands as gates.
+- [x] Share path and atomic-write safety logic between CLI and issue intake.
+- [x] Separate runtime wrapper parity validation from eval mutation probes.
+- [x] Restrict npm package contents to runtime scripts and generated runtime validation.
+- [x] Pin CI actions, add CI timeouts, and add an OIDC publish workflow with tag/version/main validation.
+- [ ] Run the complete release validation suite and inspect the final package.
+- [ ] Configure npm trusted publishing before creating `v0.4.1`.
+- [ ] Merge to `main`, confirm CI, create `v0.4.1`, and verify the published package.

@@ -17,6 +17,7 @@ const requiredDocs = [
   "docs/release-notes-0.2.4.md",
   "docs/release-notes-0.3.0.md",
   "docs/release-notes-0.4.0.md",
+  "docs/release-notes-0.4.1.md",
 ];
 
 const discoveredDocs = fs.existsSync("docs")
@@ -50,6 +51,7 @@ const forbiddenFragments = [
 const requiredFragmentsByFile = {
   "README.md": [
     "@looppilot/cli",
+    "0.4.1",
     "0.4.0",
     "npx @looppilot/cli@0.4.0 install",
     "/should-loop <task-or-issue-url>",
@@ -82,6 +84,7 @@ const requiredFragmentsByFile = {
     "0.2.4",
     "0.3.0",
     "0.4.0",
+    "0.4.1",
     "recommended_surface",
     "issue-intake",
     ".looppilot/scripts/issue-intake.mjs",
@@ -117,6 +120,7 @@ const requiredFragmentsByFile = {
     "A `check` command is also not part of the current release-ready surface",
   ],
   "docs/LoopPilot_Quickstart.md": [
+    "0.4.1",
     "0.4.0",
     "npx @looppilot/cli@0.4.0 install",
     "/should-loop <task-or-issue-url>",
@@ -148,6 +152,7 @@ const requiredFragmentsByFile = {
     "0.2.4",
     "0.3.0",
     "0.4.0",
+    "0.4.1",
     ".looppilot/scripts/issue-intake.mjs",
     "https://www.npmjs.com/package/@looppilot/cli",
     "611c591fa361bf9a1bb4209fd028b8e842eb017a",
@@ -159,6 +164,8 @@ const requiredFragmentsByFile = {
     "npm_config_cache=/private/tmp/looppilot-npm-cache",
     "Bypass two-factor authentication (2FA)",
     "revoke/delete",
+    "publish.yml",
+    "trusted publishing",
   ],
   "docs/release-notes-0.1.0.md": [
     "published to npm",
@@ -230,6 +237,14 @@ const requiredFragmentsByFile = {
     "mutate_dependencies",
     "read-only",
     ">=22",
+  ],
+  "docs/release-notes-0.4.1.md": [
+    "@looppilot/cli@0.4.0",
+    "Release Candidate",
+    "verifier allowlist",
+    ".looppilot/scripts/file-safety.mjs",
+    "trusted publishing",
+    "publish.yml",
   ],
 };
 

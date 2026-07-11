@@ -65,7 +65,9 @@ Dependency setup is limited to existing-lockfile commands: `pnpm install --froze
 
 ## Install
 
-Current repository and published npm version: `@looppilot/cli@0.4.0`.
+Current repository version: `@looppilot/cli@0.4.1` release candidate.
+
+Latest published npm version: `@looppilot/cli@0.4.0`.
 
 Recommended path:
 

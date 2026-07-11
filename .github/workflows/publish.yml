@@ -1,0 +1,59 @@
+name: Publish npm package
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'zzapril/LoopPilot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm-publish
+
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Use an OIDC-capable npm CLI
+        run: npm install --global npm@11.18.0
+
+      - name: Verify tag, package version, and main ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_version="$(node --input-type=module -e 'import info from "./package.json" with { type: "json" }; process.stdout.write(info.version)')"
+          test "${GITHUB_REF_NAME}" = "v${package_version}"
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run release validation
+        run: |
+          npm test
+          npm run eval:wrapper-parity
+          node scripts/looppilot.mjs doctor --target both --json
+          npm pack --dry-run
+
+      - name: Publish with npm trusted publishing
+        run: npm publish --access public

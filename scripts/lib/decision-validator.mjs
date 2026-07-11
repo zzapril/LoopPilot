@@ -100,21 +100,87 @@ const EXTERNAL_SURFACE_ACTIONS = new Set([
   "ask_user",
 ]);
 
-const FORBIDDEN_GATE_EXECUTABLES = new Set([
-  "rm", "rmdir", "mv", "cp", "chmod", "chown", "dd", "mkfs", "kill", "pkill",
-  "del", "erase", "rd", "move", "copy",
-  "curl", "wget", "ssh", "scp", "rsync", "sudo", "npx", "pnpx", "bunx",
-  "powershell", "pwsh", "command", "exec", "xargs", "nice", "nohup", "timeout",
+const DIRECT_VERIFIER_EXECUTABLES = new Set([
+  "eslint", "stylelint", "markdownlint", "markdownlint-cli2",
+  "jest", "vitest", "pytest", "mypy", "pyright", "shellcheck",
 ]);
-const FORBIDDEN_PACKAGE_COMMANDS = new Set([
-  "add", "ci", "config", "create", "deploy", "dlx", "install", "link", "publish", "remove", "set", "uninstall", "update", "upgrade",
-]);
-const FORBIDDEN_GIT_COMMANDS = new Set([
-  "add", "branch", "checkout", "clean", "commit", "merge", "push", "rebase", "reset", "restore", "switch", "tag",
-]);
+const SAFE_PACKAGE_SCRIPT = /^(?:test|test:[a-z0-9:_-]+|lint|lint:[a-z0-9:_-]+|typecheck|check|check:[a-z0-9:_-]+|verify|verify:[a-z0-9:_-]+|validate|validate:[a-z0-9:_-]+|format:check|docs:check)$/i;
 
 function firstCommandArgument(tokens) {
   return tokens.find((token) => !token.startsWith("-"))?.toLowerCase() ?? "";
+}
+
+function packageVerifierReason(executable, tokens) {
+  const subcommand = firstCommandArgument(tokens);
+  if (!subcommand) return `${executable} gate must name a verifier script`;
+  if (subcommand === "test") return null;
+
+  if (["run", "run-script"].includes(subcommand)) {
+    const runIndex = tokens.findIndex((token) => token.toLowerCase() === subcommand);
+    const script = tokens.slice(runIndex + 1).find((token) => !token.startsWith("-"))?.toLowerCase() ?? "";
+    return SAFE_PACKAGE_SCRIPT.test(script) ? null : `${executable} gate script ${script || "<missing>"} is not an allowlisted verifier`;
+  }
+
+  if (["pnpm", "yarn", "bun"].includes(executable) && SAFE_PACKAGE_SCRIPT.test(subcommand)) return null;
+  return `${executable} ${subcommand} is not an allowlisted verifier command`;
+}
+
+function gitVerifierReason(tokens) {
+  const normalized = tokens.map((token) => token.toLowerCase());
+  const subcommand = firstCommandArgument(tokens);
+  if (subcommand === "diff" && normalized.includes("--check")) return null;
+  if (subcommand === "status" && normalized.some((token) => token === "--porcelain" || token.startsWith("--porcelain="))) return null;
+  return `git ${subcommand || "<missing>"} is not an allowlisted verifier command`;
+}
+
+function toolchainVerifierReason(executable, tokens) {
+  const subcommand = firstCommandArgument(tokens);
+  const normalized = tokens.map((token) => token.toLowerCase());
+  if (["eslint", "stylelint"].includes(executable) && normalized.includes("--fix")) {
+    return `${executable} gate cannot use --fix`;
+  }
+  if (["jest", "vitest"].includes(executable)
+    && normalized.some((token) => ["-u", "--updatesnapshot", "--watch", "--watchall"].includes(token))) {
+    return `${executable} gate cannot update snapshots or watch indefinitely`;
+  }
+  if (DIRECT_VERIFIER_EXECUTABLES.has(executable)) return null;
+  if (["tsc", "vue-tsc"].includes(executable)) {
+    return normalized.some((token) => token === "--noemit") ? null : `${executable} gate must use --noEmit`;
+  }
+  if (executable === "prettier") {
+    return normalized.some((token) => ["--check", "--list-different"].includes(token))
+      && !normalized.some((token) => ["--write", "-w"].includes(token))
+      ? null : "prettier gate must use --check or --list-different";
+  }
+  if (executable === "biome") {
+    return ["check", "ci"].includes(subcommand) && !normalized.includes("--write")
+      ? null : `biome ${subcommand} is not a read-only verifier command`;
+  }
+  if (executable === "ruff") {
+    return ["check", "format"].includes(subcommand) && !normalized.includes("--fix")
+      ? null : `ruff ${subcommand} is not a read-only verifier command`;
+  }
+  if (executable === "node") return tokens[0]?.toLowerCase() === "--check" ? null : "node gate must use --check";
+  if (executable === "cargo") {
+    if (["test", "check", "clippy"].includes(subcommand) && !normalized.includes("--fix")) return null;
+    if (subcommand === "fmt" && tokens.some((token) => token === "--check")) return null;
+    return `cargo ${subcommand} is not an allowlisted verifier command`;
+  }
+  if (executable === "go") return ["test", "vet"].includes(subcommand) ? null : `go ${subcommand} is not an allowlisted verifier command`;
+  if (executable === "dotnet") return subcommand === "test" ? null : `dotnet ${subcommand} is not an allowlisted verifier command`;
+  if (["mvn", "mvnw"].includes(executable)) return ["test", "verify"].includes(subcommand) ? null : `${executable} ${subcommand} is not an allowlisted verifier command`;
+  if (["gradle", "gradlew"].includes(executable)) {
+    const targets = tokens.filter((token) => !token.startsWith("-"));
+    return targets.length > 0 && targets.every((token) => /^(?:test|check|lint)(?::[a-z0-9_-]+)*$/i.test(token))
+      ? null : `${executable} gate must name a test, check, or lint task`;
+  }
+  if (["make", "just", "task"].includes(executable)) {
+    const targets = tokens.filter((token) => !token.startsWith("-"));
+    const overridesBuildFile = normalized.some((token) => ["-f", "--file", "--makefile"].includes(token));
+    return !overridesBuildFile && targets.length > 0 && targets.every((token) => SAFE_PACKAGE_SCRIPT.test(token))
+      ? null : `${executable} gate must name an allowlisted verifier target`;
+  }
+  return `executable ${executable || "<missing>"} is not an allowlisted local verifier`;
 }
 
 function commandReferencesSensitivePath(command) {
@@ -138,58 +204,17 @@ function unsafeGateCommandReason(command) {
   }
   if (/[\r\n;&|`<>]|\$\(/.test(command)) return "must be one simple verifier command without shell control operators";
   const tokens = command.trim().split(/\s+/);
-  if (tokens[0]?.toLowerCase() === "env") {
-    tokens.shift();
-    if (tokens[0]?.startsWith("-")) return "cannot use env wrapper flags in a gate command";
+  if (tokens[0]?.toLowerCase() === "env" || /^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0] ?? "")) {
+    return "cannot use environment wrappers or assignments in a gate command";
   }
-  while (/^[A-Za-z_][A-Za-z0-9_]*=/.test(tokens[0] ?? "")) tokens.shift();
+  const mutatingFlag = tokens.map((token) => token.toLowerCase()).find(
+    (token) => ["--fix", "--write", "-u", "--updatesnapshot", "--watch", "--watchall"].includes(token),
+  );
+  if (mutatingFlag) return `cannot use mutating or unbounded verifier flag ${mutatingFlag}`;
   const executable = (tokens.shift() ?? "").split(/[\\/]/).pop().toLowerCase();
-  if (FORBIDDEN_GATE_EXECUTABLES.has(executable)) return `cannot use mutating or external executable ${executable}`;
-  if (["sh", "bash", "zsh", "fish", "cmd"].includes(executable) && tokens.some((token) => ["-c", "/c"].includes(token.toLowerCase()))) {
-    return `cannot execute inline shell code through ${executable}`;
-  }
-  if (["node", "python", "python3", "ruby", "perl"].includes(executable)
-    && tokens.some((token) => ["-e", "--eval", "-c"].includes(token.toLowerCase()))) {
-    return `cannot execute inline code through ${executable}`;
-  }
-  if (["npm", "pnpm", "yarn", "bun"].includes(executable)) {
-    const subcommand = firstCommandArgument(tokens);
-    if (FORBIDDEN_PACKAGE_COMMANDS.has(subcommand)) return `cannot use dependency or publish command ${executable} ${subcommand}`;
-    if (subcommand === "run") {
-      const runIndex = tokens.findIndex((token) => token.toLowerCase() === "run");
-      const script = tokens.slice(runIndex + 1).find((token) => !token.startsWith("-"))?.toLowerCase() ?? "";
-      if (/^(pre|post)?(deploy|publish|release)(:|$)/.test(script)) return `cannot use release script ${script}`;
-    }
-  }
-  if (executable === "git") {
-    const subcommand = tokens.map((token) => token.toLowerCase()).find((token) => FORBIDDEN_GIT_COMMANDS.has(token));
-    if (subcommand) return `cannot use mutating git command git ${subcommand}`;
-  }
-  if (executable === "docker" && tokens.some((token) => ["push", "rm", "rmi"].includes(token.toLowerCase()))) {
-    return "cannot use a mutating Docker command as a gate";
-  }
-  const subcommand = firstCommandArgument(tokens);
-  if (["pip", "pip3"].includes(executable) && ["install", "uninstall"].includes(subcommand)) {
-    return `cannot use dependency command ${executable} ${subcommand}`;
-  }
-  if (executable === "cargo" && ["add", "install", "publish", "remove"].includes(subcommand)) {
-    return `cannot use dependency or publish command cargo ${subcommand}`;
-  }
-  if (executable === "go" && ["get", "install"].includes(subcommand)) {
-    return `cannot use dependency command go ${subcommand}`;
-  }
-  if (["mvn", "mvnw", "gradle", "gradlew"].includes(executable)
-    && tokens.some((token) => /(^|:)(deploy|publish|release)$/.test(token.toLowerCase()))) {
-    return `cannot use release task through ${executable}`;
-  }
-  if (["make", "just", "task"].includes(executable)
-    && tokens.some((token) => /^(deploy|publish|release)(:|$)/.test(token.toLowerCase()))) {
-    return `cannot use release target through ${executable}`;
-  }
-  if (["kubectl", "terraform", "tofu", "helm", "gh"].includes(executable)) {
-    return `cannot use external-state command ${executable} as a local gate`;
-  }
-  return null;
+  if (["npm", "pnpm", "yarn", "bun"].includes(executable)) return packageVerifierReason(executable, tokens);
+  if (executable === "git") return gitVerifierReason(tokens);
+  return toolchainVerifierReason(executable, tokens);
 }
 
 function fail(errors, path, message) {

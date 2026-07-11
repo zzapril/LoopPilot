@@ -591,23 +591,25 @@ git diff --check
 ```text
 npm test:
 - Schema validation passed.
-- Ajv-generated schema validation passed for 52 fixtures and negative probes.
+- Ajv-generated schema validation passed for 52 fixtures, 25 schema-negative probes, 43 safety-negative probes, and 9 safety-positive probes.
 - Fixture distribution: 15 NO_GO, 18 PLAN_ONLY, 19 RUN_WITH_CONTRACT.
-- Wrapper, wrapper parity, scan, scan security, Claude project summary, host capability summary, export, fixture coverage, save command, manual template, review-gate template, package contents/runtime smoke, docs consistency, install, and CLI argument validation passed.
+- Wrapper, wrapper parity, scan, scan security, Claude project summary, host capability summary, export, fixture coverage, save command, manual template, review-gate template, package contents/runtime smoke, docs consistency, workflow, install, and CLI argument validation passed.
 
 eval:wrapper-parity:
 - Golden wrapper output parity passed for 6 fixtures, including capability-aware surface differences.
 
 doctor --target both --json:
 - ok: true
-- package: @looppilot/cli@0.4.0
-- installedFileCount: 19
+- package: @looppilot/cli@0.4.1
+- installedFileCount: 20
 - missingFileCount: 0
 - core files include uppercase v1 templates and helper scripts.
 
 npm pack --dry-run:
-- Package version: 0.4.0
-- includes uppercase v1 templates, issue-intake helper scripts, and docs/progress notes.
+- Package version: 0.4.1
+- 51 files, about 113 kB compressed and 513 kB unpacked.
+- includes uppercase v1 templates, issue-intake/file-safety helper scripts, runtime validators, and docs/progress notes.
+- excludes development-only validation, eval, reporting, and generator scripts.
 - excludes generated `.looppilot/exports/`, `.looppilot/latest-*`, `.looppilot/VISION.md`, `.looppilot/STATE.md`, and `.looppilot/RUN_LOG.md`.
 
 git diff --check:

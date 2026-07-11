@@ -2,7 +2,9 @@
 
 LoopPilot should feel like a safety button inside Claude Code or Codex: install once, then ask whether a task should loop and which agent execution surface it should use.
 
-Current repository and published npm version: `@looppilot/cli@0.4.0`.
+Current repository version: `@looppilot/cli@0.4.1` release candidate.
+
+Latest published npm version: `@looppilot/cli@0.4.0`.
 
 ## 1. Install Once
 

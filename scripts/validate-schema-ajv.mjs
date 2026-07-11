@@ -54,6 +54,7 @@ function expectPass(label, validatorName, validatorErrors) {
 
 let schemaNegativeProbeCount = 0;
 let safetyNegativeProbeCount = 0;
+let safetyPositiveProbeCount = 0;
 
 fixtures.forEach((fixture, index) => {
   const label = `fixtures[${index}].expected_decision`;
@@ -351,6 +352,21 @@ if (!runDecision || !nonRunDecision) {
       "cat /tmp/.env",
       "tool --config=.npmrc",
       "cat .docker/config.json",
+      "npm exec dangerous-package",
+      "bun x dangerous-package",
+      "docker run --rm image",
+      "aws s3 rm s3://bucket/key",
+      "gcloud storage rm gs://bucket/key",
+      "bash scripts/deploy.sh",
+      "make deploy-prod",
+      "node scripts/deploy.mjs",
+      "eslint . --fix",
+      "tsc",
+      "jest -u",
+      "make test deploy",
+      "gradle test deploy",
+      "npm run lint -- --fix",
+      "npm test -- --updateSnapshot",
     ].map((command) => ({
       label: `safety.unsafe_gate_command.${command.replace(/[^a-z]+/gi, "_")}`,
       mutate(decision) {
@@ -395,6 +411,27 @@ if (!runDecision || !nonRunDecision) {
     expectPass(negativeCase.label, "local schema", localErrors);
     expectFailure(negativeCase.label, "combined safety validator", combinedErrors);
   });
+
+  for (const command of [
+    "npm test",
+    "npm run lint:a11y",
+    "pnpm lint",
+    "git diff --check",
+    "node --check scripts/looppilot.mjs",
+    "tsc --noEmit",
+    "cargo test",
+    "go test ./...",
+    "pytest tests",
+  ]) {
+    safetyPositiveProbeCount += 1;
+    const decision = clone(runDecision);
+    decision.contract.gate.command = command;
+    expectPass(
+      `safety.safe_gate_command.${command.replace(/[^a-z]+/gi, "_")}`,
+      "combined safety validator",
+      validateDecisionAgainstSchema(decision, schema, "safe_gate"),
+    );
+  }
 }
 
 if (errors.length > 0) {
@@ -408,3 +445,4 @@ console.log(`Fixtures checked: ${fixtures.length}`);
 console.log("Draft: 2020-12");
 console.log(`Schema negative probes checked: ${schemaNegativeProbeCount}`);
 console.log(`Safety negative probes checked: ${safetyNegativeProbeCount}`);
+console.log(`Safety positive probes checked: ${safetyPositiveProbeCount}`);

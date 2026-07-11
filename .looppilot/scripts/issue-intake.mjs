@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import fs from "node:fs";
-import crypto from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { assertSafeOutputDestination, writeTextAtomically } from "./file-safety.mjs";
 
 const ISSUE_BODY_MAX_CHARS = 30000;
 const ISSUE_REFERENCE_PATTERNS = [
@@ -53,119 +53,6 @@ function assertDirectoryExists(directory, label) {
   }
   if (!stat.isDirectory()) {
     throw new Error(`${label} path is not a directory: ${directory}`);
-  }
-}
-
-function isProtectedPackPath(relativePath) {
-  const normalized = relativePath.split(path.sep).join("/").toLowerCase();
-  return normalized.startsWith(".looppilot/core/")
-    || normalized.startsWith(".looppilot/fixtures/")
-    || normalized.startsWith(".looppilot/scripts/")
-    || normalized.startsWith(".agents/skills/looppilot/")
-    || normalized.startsWith(".claude/skills/looppilot/")
-    || normalized === ".claude/commands/should-loop.md";
-}
-
-function isInsideProject(targetRoot, candidatePath) {
-  const relative = path.relative(targetRoot, candidatePath);
-  return relative === "" || (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`));
-}
-
-function isDependencyMetadataPath(relativePath) {
-  const basename = relativePath.split(path.sep).pop()?.toLowerCase() ?? "";
-  return new Set([
-    "package.json", "package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml",
-    "yarn.lock", "bun.lock", "bun.lockb", "deno.lock",
-  ]).has(basename);
-}
-
-function isSensitivePath(candidatePath) {
-  const normalized = candidatePath.split(path.sep).join("/").toLowerCase();
-  const segments = normalized.split("/").filter(Boolean);
-  const basename = segments.at(-1) ?? "";
-  return /^\.env(?:\..*)?$/.test(basename)
-    || [".npmrc", ".pypirc", ".netrc"].includes(basename)
-    || /\.(?:pem|key)$/.test(basename)
-    || segments.some((segment) => ["secrets", ".ssh", ".aws"].includes(segment))
-    || normalized.endsWith("/.docker/config.json")
-    || normalized.endsWith("/.config/gh/hosts.yml");
-}
-
-function assertSafeOutputDestination(targetRoot, outputPath) {
-  const relative = path.relative(targetRoot, outputPath);
-  const insideProject = isInsideProject(targetRoot, outputPath);
-  if (insideProject) {
-    let current = targetRoot;
-    const parts = relative.split(path.sep).filter(Boolean);
-    for (let index = 0; index < parts.length; index += 1) {
-      const part = parts[index];
-      current = path.join(current, part);
-      try {
-        const stat = fs.lstatSync(current);
-        if (stat.isSymbolicLink()) {
-          throw new Error(`issue-intake output uses symbolic link path component ${path.relative(targetRoot, current)}.`);
-        }
-        if (index < parts.length - 1 && !stat.isDirectory()) {
-          throw new Error(`issue-intake output parent is not a directory: ${path.relative(targetRoot, current)}.`);
-        }
-      } catch (error) {
-        if (error.code !== "ENOENT") throw error;
-      }
-    }
-    if (isProtectedPackPath(relative)) {
-      throw new Error(`issue-intake refuses to overwrite Agent Pack file ${relative}.`);
-    }
-  }
-  if (isDependencyMetadataPath(outputPath)) {
-    throw new Error(`issue-intake refuses to overwrite dependency metadata ${outputPath}.`);
-  }
-  if (isSensitivePath(outputPath)) {
-    throw new Error(`issue-intake refuses to write a sensitive path ${outputPath}.`);
-  }
-  try {
-    const stat = fs.lstatSync(outputPath);
-    if (stat.isSymbolicLink() || !stat.isFile()) {
-      throw new Error(`issue-intake output must be a regular file, not a symbolic link or directory: ${outputPath}`);
-    }
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
-}
-
-function writeTextAtomically(outputPath, content) {
-  const temporaryPath = path.join(
-    path.dirname(outputPath),
-    `.${path.basename(outputPath)}.looppilot-${process.pid}-${crypto.randomUUID()}.tmp`,
-  );
-  let displacedPath = null;
-  let replacementSucceeded = false;
-  try {
-    fs.writeFileSync(temporaryPath, content, "utf8");
-    try {
-      fs.renameSync(temporaryPath, outputPath);
-    } catch (error) {
-      if (!fs.existsSync(outputPath) || !["EEXIST", "EPERM"].includes(error.code)) throw error;
-      displacedPath = path.join(
-        path.dirname(outputPath),
-        `.${path.basename(outputPath)}.looppilot-${process.pid}-${crypto.randomUUID()}.old`,
-      );
-      fs.renameSync(outputPath, displacedPath);
-      try {
-        fs.renameSync(temporaryPath, outputPath);
-        replacementSucceeded = true;
-      } catch (replacementError) {
-        try {
-          fs.renameSync(displacedPath, outputPath);
-          displacedPath = null;
-        } catch (restoreError) {
-          throw new Error(`Replacement failed and the original file was preserved at ${displacedPath}: ${restoreError.message}`, { cause: replacementError });
-        }
-        throw replacementError;
-      }
-    }
-  } finally {
-    fs.rmSync(temporaryPath, { force: true });
-    if (replacementSucceeded && displacedPath) fs.rmSync(displacedPath, { force: true });
   }
 }
 
@@ -607,7 +494,7 @@ export async function runIssueIntake(options) {
   assertDirectoryExists(targetRoot, "Project");
   const outputPath = options.output ? path.resolve(targetRoot, options.output) : null;
   if (outputPath) {
-    assertSafeOutputDestination(targetRoot, outputPath);
+    assertSafeOutputDestination(targetRoot, outputPath, "issue-intake");
     if (fs.existsSync(outputPath) && !options.force) {
       throw new Error(`${path.relative(targetRoot, outputPath)} already exists. Re-run with --force to overwrite.`);
     }

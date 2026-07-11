@@ -125,7 +125,7 @@ Every `RUN_WITH_CONTRACT` contract must include:
 
 `stop_conditions` must include `gate_passes`, `max_rounds_reached`, `forbidden_action_needed`, and `user_interrupt`.
 
-A command gate is one local verifier command, not an action pipeline. It must not contain shell control operators, inline shell/code execution, destructive filesystem commands, dependency installation, git mutation, release/publish scripts, network download commands, external-state mutation tools, or references to sensitive paths such as `.env`, `.npmrc`, `secrets/**`, `.ssh/**`, `.aws/**`, private keys, or credential configs.
+A command gate is one allowlisted local verifier command, not an action pipeline or arbitrary executable. Supported forms are package test/lint/typecheck/check/verify/validate scripts and recognized local static-analysis/test tools. It must not contain shell control operators, environment wrappers or assignments, arbitrary scripts, destructive filesystem commands, dependency installation, git mutation, release/publish scripts, network commands, external-state tools, or references to sensitive paths such as `.env`, `.npmrc`, `secrets/**`, `.ssh/**`, `.aws/**`, private keys, or credential configs.
 
 Top-level `required_user_confirmation` is the pre-execution subset of contract `human_confirmations`; every top-level entry must also appear in the contract list.
 

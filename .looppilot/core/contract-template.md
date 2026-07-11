@@ -96,7 +96,7 @@ Forbidden:
 
 Gate:
 - `<safe verification command or checklist>`
-- Command gates use one local verifier command only; no shell pipelines/control operators, dependency changes, git mutation, release actions, downloads, external-state tools, or sensitive path references.
+- Command gates use one allowlisted local verifier command only; no arbitrary scripts, environment wrappers, shell pipelines/control operators, dependency changes, git mutation, release actions, downloads, external-state tools, or sensitive path references.
 
 Stop:
 - Gate passes.

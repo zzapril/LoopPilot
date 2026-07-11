@@ -47,21 +47,18 @@ if (result.status !== 0) {
       ".looppilot/scripts/scan-summary.mjs",
       ".looppilot/scripts/claude-project-summary.mjs",
       ".looppilot/scripts/host-capability-summary.mjs",
+      ".looppilot/scripts/file-safety.mjs",
       ".looppilot/scripts/issue-intake.mjs",
       ".agents/skills/looppilot/SKILL.md",
       ".claude/skills/looppilot/SKILL.md",
       ".claude/commands/should-loop.md",
       "scripts/looppilot.mjs",
-      "scripts/generate-schema-validator.mjs",
       "scripts/generated/decision-schema-validator.mjs",
-      "scripts/validate-all.mjs",
-      "scripts/validate-docs-consistency.mjs",
-      "scripts/validate-issue-intake.mjs",
-      "scripts/validate-package-contents.mjs",
       "scripts/lib/decision-validator.mjs",
       "scripts/lib/cli.mjs",
       "scripts/lib/schema-validator.mjs",
       "scripts/lib/wrapper-validator.mjs",
+      "scripts/lib/wrapper-parity.mjs",
       "docs/README.md",
       "docs/LoopPilot_Quickstart.md",
       "docs/LoopPilot_PRD_v0.2.md",
@@ -76,6 +73,7 @@ if (result.status !== 0) {
       "docs/release-notes-0.2.4.md",
       "docs/release-notes-0.3.0.md",
       "docs/release-notes-0.4.0.md",
+      "docs/release-notes-0.4.1.md",
       "IMPLEMENTATION_PROGRESS.md",
       "README.md",
       "LICENSE",
@@ -84,6 +82,7 @@ if (result.status !== 0) {
     const forbiddenPrefixes = [
       ".looppilot/exports/",
       ".looppilot/latest-",
+      "scripts/validate-",
     ];
     const forbiddenFiles = [
       ".looppilot/latest-contract.md",
@@ -92,6 +91,10 @@ if (result.status !== 0) {
       ".looppilot/VISION.md",
       ".looppilot/STATE.md",
       ".looppilot/RUN_LOG.md",
+      "scripts/eval-wrapper-parity.mjs",
+      "scripts/generate-schema-validator.mjs",
+      "scripts/report-fixture-coverage.mjs",
+      "scripts/validate-all.mjs",
     ];
 
     for (const file of requiredFiles) {
